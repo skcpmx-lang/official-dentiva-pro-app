@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, session as electronSession, shell } from 'electron'
 import { existsSync, renameSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
+import { markReady, markRecovery, markStarting, startupState } from './startup/state'
 import { createElectronHost } from './platform/electronHost'
 import { openDatabase, type DatabaseContext } from './db/connection'
 import { SessionManager } from './session/sessionManager'
@@ -18,7 +19,7 @@ import { createPrintingHandlers } from './ipc/handlers/printing'
 import { createBackupHandlers } from './ipc/handlers/backup'
 import { createNotificationHandlers } from './ipc/handlers/notifications'
 import { liveRowCounts, runScheduledBackup } from './backup/service'
-import { createServiceContext, SYSTEM_ACTOR } from './context'
+import { createServiceContext, SCHEDULER_ACTOR } from './context'
 import { verifyActivationIntegrity } from './activation/service'
 import { AppError, describeErrorForLog } from '@shared/errors'
 import type { HostServices } from './platform/types'
@@ -105,6 +106,7 @@ function openDatabaseSafely(): void {
       appVersion: host.build.version
     })
     recoveryReason = null
+    markReady()
     const integrity = verifyActivationIntegrity(database.db)
     if (integrity.invalidated) {
       host.logger.warn('Activation state failed its integrity check and was reset')
@@ -117,6 +119,7 @@ function openDatabaseSafely(): void {
       error instanceof AppError
         ? error.message
         : 'The clinic database could not be opened. Your data has not been changed.'
+    markRecovery(recoveryReason)
     host.logger.error('Database could not be opened — entering recovery mode', error)
     database = null
   }
@@ -309,9 +312,54 @@ function installCrashGuards(): void {
   })
 }
 
+/**
+ * The recovery surface.
+ *
+ * Without a database there is no router, so a clinic in recovery mode could not open its own folders or
+ * restart — the very actions the recovery screen offers. These three channels are therefore answered by
+ * the process itself when the router is unavailable; every other request is refused with the reason the
+ * application is in recovery.
+ */
+const RECOVERY_CHANNELS = new Set(['app.startupState', 'app.openDataFolder', 'app.relaunch'])
+
+async function handleRecoveryRequest(channelId: string, payload: unknown): Promise<unknown> {
+  if (channelId === 'app.startupState') return { ok: true, data: startupState() }
+  if (channelId === 'app.openDataFolder' && host) {
+    const kind = (payload as { kind?: string } | null)?.kind ?? 'data'
+    const map = {
+      data: host.paths.dataDir,
+      logs: host.paths.logsDir,
+      exports: host.paths.exportsDir,
+      backups: host.paths.defaultBackupDir,
+      attachments: host.paths.attachmentsDir
+    } as const
+    const target = map[(kind as keyof typeof map) in map ? (kind as keyof typeof map) : 'data']
+    const failure = await host.shell.openPath(target)
+    if (failure) return { ok: false, error: { code: 'E_IO', message: `The folder could not be opened: ${failure}` } }
+    return { ok: true, data: { ok: true } }
+  }
+  if (channelId === 'app.relaunch') {
+    setTimeout(() => {
+      app.relaunch()
+      app.exit(0)
+    }, 300)
+    return { ok: true, data: { ok: true } }
+  }
+  return {
+    ok: false,
+    error: { code: 'E_STATE', message: 'That action needs the clinic database, which could not be opened.' }
+  }
+}
+
 function registerIpc(): void {
   ipcMain.handle(IPC_INVOKE, async (event, channelId: unknown, payload: unknown) => {
+    if (typeof channelId !== 'string') {
+      return { ok: false, error: { code: 'E_VALIDATION', message: 'Unsupported request.' } }
+    }
+    /* Answered with or without a router: the recovery screen has to be able to describe itself. */
+    if (channelId === 'app.startupState' && router) return router.handle(event.sender.id, channelId, payload)
     if (!router) {
+      if (RECOVERY_CHANNELS.has(channelId)) return handleRecoveryRequest(channelId, payload)
       return {
         ok: false,
         error: {
@@ -320,15 +368,13 @@ function registerIpc(): void {
         }
       }
     }
-    if (typeof channelId !== 'string') {
-      return { ok: false, error: { code: 'E_VALIDATION', message: 'Unsupported request.' } }
-    }
     return router.handle(event.sender.id, channelId, payload)
   })
 }
 
 async function bootstrap(): Promise<void> {
   app.setName('Dentiva Pro')
+  markStarting()
   const gotLock = app.requestSingleInstanceLock()
   if (!gotLock) {
     app.quit()
@@ -351,6 +397,7 @@ async function bootstrap(): Promise<void> {
       router = buildRouter()
     } catch (error) {
       recoveryReason = 'Dentiva Pro could not start its internal services. Please contact support with the log files.'
+      markRecovery(recoveryReason)
       host.logger.error('Failed to build the IPC router', error)
       router = null
     }
@@ -384,7 +431,7 @@ function scheduleAutomaticBackups(): void {
       const ctx = createServiceContext({
         db: database.db,
         host,
-        actor: { ...SYSTEM_ACTOR, permissions: new Set(['backups.create']) },
+        actor: SCHEDULER_ACTOR,
         sessionId: 'scheduler'
       })
       const result = await runScheduledBackup(ctx, {})

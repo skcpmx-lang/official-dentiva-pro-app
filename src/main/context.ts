@@ -53,6 +53,23 @@ export const SYSTEM_ACTOR: Actor = {
   maxDiscountBasisPoints: null
 }
 
+/**
+ * Actor for work the application performs on its own behalf while the clinic works: today that is only
+ * the automatic backup timer. `SYSTEM_ACTOR` deliberately may not touch clinic data at all — it exists
+ * for activation, the setup wizard and recovery — so the scheduler needs its own identity to be able to
+ * read the backup schedule and write the package. The audit trail records it as “Dentiva Pro scheduler”,
+ * so an automatic package is never mistaken for something an operator did.
+ */
+export const SCHEDULER_ACTOR: Actor = {
+  userId: 0,
+  username: 'scheduler',
+  fullName: 'Dentiva Pro scheduler',
+  roleId: 0,
+  roleCode: 'scheduler',
+  permissions: new Set<string>(['backups.create']),
+  maxDiscountBasisPoints: null
+}
+
 export function createAuditWriter(db: Db, actor: Actor, sessionId: string, now: () => number): AuditWriter {
   const insert = db.prepare(
     `INSERT INTO audit_log (at, user_id, username, module, action, entity_type, entity_id, summary, detail_json, result, session_id)

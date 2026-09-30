@@ -10,6 +10,7 @@ import type { CHANNELS, ChannelOutput } from '@shared/contracts'
 type InputOf<C extends keyof typeof CHANNELS> = z.input<(typeof CHANNELS)[C]['input']>
 
 export type BootstrapResult = ChannelOutput<'app.bootstrap'>
+export type StartupState = ChannelOutput<'app.startupState'>
 export type SessionSummary = ChannelOutput<'session.refresh'>
 export type SessionState = ChannelOutput<'session.state'>
 export type ClinicProfile = ChannelOutput<'settings.clinic'>

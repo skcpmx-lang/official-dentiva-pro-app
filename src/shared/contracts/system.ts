@@ -301,6 +301,17 @@ export const systemChannels = {
       session: zSessionSummary.nullable()
     })
   ),
+  /**
+   * Answered even when the clinic database could not be opened, so the recovery screen can explain
+   * itself instead of showing a generic failure.
+   */
+  'app.startupState': channel(
+    z.object({}).default({}),
+    z.object({
+      mode: z.enum(['starting', 'recovery', 'ready']),
+      reason: z.string().nullable()
+    })
+  ),
   'app.environment': channel(
     z.object({}).default({}),
     z.object({

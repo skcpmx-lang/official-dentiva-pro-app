@@ -8,6 +8,7 @@ import { changeOwnPassword, login } from '../../modules/auth/service'
 import { deriveActor } from '../../modules/auth/actor'
 import { verifyPassword } from '../../auth/password'
 import { evaluateDiagnostics, collectAboutInfo } from '../../modules/support/service'
+import { startupState } from '../../startup/state'
 import type { PartialHandlerMap } from '../router'
 import type { SessionManager } from '../../session/sessionManager'
 import type { HostServices } from '../../platform/types'
@@ -97,6 +98,8 @@ export function createSystemHandlers(deps: HandlerDeps): PartialHandlerMap {
       logDirectory: ctx.host.paths.logsDir,
       isDevelopment: ctx.host.isDevelopment()
     }),
+
+    'app.startupState': () => startupState(),
 
     'app.openDataFolder': async (ctx, input) => {
       const map = {

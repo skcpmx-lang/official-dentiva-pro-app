@@ -44,7 +44,7 @@ import { NotificationsScreen } from './features/notifications/NotificationsScree
 import { AuditScreen } from './features/admin/AuditScreen'
 import { AboutScreen } from './features/admin/AboutScreen'
 import { NotFoundScreen } from './features/states/NotFoundScreen'
-import type { BootstrapResult } from './lib/types'
+import type { BootstrapResult, StartupState } from './lib/types'
 
 /**
  * Application root.
@@ -148,6 +148,7 @@ export function App(): ReactNode {
 /** Runs the startup handshake and keeps global state (session, settings, events) up to date. */
 function BootstrapGate({ children }: { children: ReactNode }): ReactNode {
   const [error, setError] = useState<string | null>(null)
+  const [startup, setStartup] = useState<StartupState | null>(null)
   const [attempt, setAttempt] = useState(0)
   const setReady = useAppStore((state) => state.setReady)
 
@@ -163,6 +164,13 @@ function BootstrapGate({ children }: { children: ReactNode }): ReactNode {
       } catch (caught) {
         if (!active) return
         setError(caught instanceof Error ? caught.message : 'Dentiva Pro could not start.')
+        /* The main process answers this channel even when it could not open the database. */
+        try {
+          const state = await invoke('app.startupState', {})
+          if (active) setStartup(state)
+        } catch {
+          /* Leave the generic message in place. */
+        }
       } finally {
         if (active && !controller.cancelled) setReady(true)
       }
@@ -183,14 +191,16 @@ function BootstrapGate({ children }: { children: ReactNode }): ReactNode {
   }, [attempt])
 
   if (error) {
+    const recovery = startup?.mode === 'recovery'
     return (
       <div className="auth-layout">
         <div className="auth-card stack">
-          <h1 className="auth-card__title">Dentiva Pro could not start</h1>
-          <p className="muted">{error}</p>
+          <h1 className="auth-card__title">{recovery ? 'Dentiva Pro is in recovery mode' : 'Dentiva Pro could not start'}</h1>
+          <p className="muted">{startup?.reason ?? error}</p>
           <p className="muted small">
-            Your data has not been changed. If the problem continues, open the data folder from the recovery options below and contact support
-            with the log files from the <code>logs</code> folder.
+            {recovery
+              ? 'The clinic database could not be opened, so no record is available and nothing has been changed. Your files are still where they were: open the data folder below to copy them somewhere safe, or run a restore from a backup through your support contact. Restarting the application retries the normal start-up.'
+              : 'Your data has not been changed. If the problem continues, open the log folder below and contact support with the files inside it.'}
           </p>
           <div className="row">
             <Button variant="primary" onClick={() => setAttempt((value) => value + 1)}>
@@ -199,10 +209,26 @@ function BootstrapGate({ children }: { children: ReactNode }): ReactNode {
             <Button
               variant="secondary"
               onClick={() => {
+                void invoke('app.openDataFolder', { kind: recovery ? 'data' : 'logs' })
+              }}
+            >
+              Open data folder
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
                 void invoke('app.openDataFolder', { kind: 'logs' })
               }}
             >
               Open log folder
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                void invoke('app.relaunch', {})
+              }}
+            >
+              Restart Dentiva Pro
             </Button>
           </div>
         </div>
