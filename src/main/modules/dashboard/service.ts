@@ -3,6 +3,7 @@ import { assertAnyPermission } from '../../context'
 import { resolveRange } from '../shared/query'
 import { fromLocalDate, toLocalDate } from '@shared/datetime'
 import { countPatients, patientsAddedBetween } from '../patients/service'
+import { notificationCounts } from '../notifications/service'
 
 /**
  * Dashboard aggregation.
@@ -255,10 +256,9 @@ export function getDashboardSummary(ctx: ServiceContext, input: { range?: { pres
     )
     .all() as DashboardSummary['recentActivity'])
 
-  const unreadNotifications = (ctx.db.prepare('SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0 AND is_deleted = 0').get() as { count: number }).count
-  const criticalNotifications = (
-    ctx.db.prepare("SELECT COUNT(*) AS count FROM notifications WHERE is_read = 0 AND is_deleted = 0 AND severity IN ('critical','warning')").get() as { count: number }
-  ).count
+  /* Counted through the notification service so the dashboard badge, the bell and the centre agree,
+     and so only notifications this actor is allowed to see are counted. */
+  const notices = notificationCounts(ctx)
 
   return {
     range: { preset: input.range?.preset ?? 'last30', from: range.from, to: range.to },
@@ -271,7 +271,7 @@ export function getDashboardSummary(ctx: ServiceContext, input: { range?: { pres
     revenueSeries,
     dentistLoad,
     recentActivity,
-    notifications: { unread: unreadNotifications, critical: criticalNotifications },
+    notifications: { unread: notices.unread, critical: notices.critical },
     generatedAt: now
   }
 }

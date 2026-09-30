@@ -16,6 +16,7 @@ import { createInventoryHandlers } from './ipc/handlers/inventory'
 import { createAccountingHandlers } from './ipc/handlers/accounting'
 import { createPrintingHandlers } from './ipc/handlers/printing'
 import { createBackupHandlers } from './ipc/handlers/backup'
+import { createNotificationHandlers } from './ipc/handlers/notifications'
 import { liveRowCounts, runScheduledBackup } from './backup/service'
 import { createServiceContext, SYSTEM_ACTOR } from './context'
 import { verifyActivationIntegrity } from './activation/service'
@@ -194,6 +195,7 @@ function buildRouter(): IpcRouter {
   instance.register(createAccountingHandlers(deps))
   instance.register(createPrintingHandlers(deps))
   instance.register(createBackupHandlers(deps))
+  instance.register(createNotificationHandlers(deps))
   instance.register(createDashboardHandlers())
   const missing = instance.missingChannels()
   if (missing.length > 0) {

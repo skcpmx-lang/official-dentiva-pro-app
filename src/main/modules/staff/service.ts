@@ -95,7 +95,10 @@ export function listStaff(
   const conditions = [filter.includeArchived ? '1 = 1' : 's.is_deleted = 0']
   const params: Record<string, unknown> = {}
   if (filter.search) {
-    conditions.push('(s.full_name LIKE @search OR COALESCE(s.phone, \'\') LIKE @search OR COALESCE(s.designation, \'\') LIKE @search)')
+    /* The Bengali name and the department are searchable too; staff registers are commonly bilingual. */
+    conditions.push(
+      "(s.full_name LIKE @search OR COALESCE(s.full_name_bn, '') LIKE @search OR COALESCE(s.phone, '') LIKE @search OR COALESCE(s.designation, '') LIKE @search OR COALESCE(s.department, '') LIKE @search)"
+    )
     params.search = `%${filter.search.replace(/[%_]/g, '')}%`
   }
   if (filter.status) {

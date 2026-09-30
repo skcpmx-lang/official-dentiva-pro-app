@@ -10,6 +10,7 @@ import { createInventoryHandlers } from '@main/ipc/handlers/inventory'
 import { createAccountingHandlers } from '@main/ipc/handlers/accounting'
 import { createPrintingHandlers } from '@main/ipc/handlers/printing'
 import { createBackupHandlers } from '@main/ipc/handlers/backup'
+import { createNotificationHandlers } from '@main/ipc/handlers/notifications'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
@@ -55,6 +56,7 @@ function collectHandlers(): Set<string> {
     createAccountingHandlers(deps),
     createPrintingHandlers(deps),
     createBackupHandlers(deps),
+    createNotificationHandlers(deps),
     createDashboardHandlers()
   ]
   const keys = new Set<string>()

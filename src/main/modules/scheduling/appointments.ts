@@ -212,7 +212,12 @@ export function listAppointments(ctx: ServiceContext, filter: AppointmentFilter)
   if (filter.search && filter.search.trim() !== '') {
     const term = `%${filter.search.trim()}%`
     const fold = `%${foldForSearch(filter.search)}%`
-    clauses.push(`(p.full_name LIKE @term OR p.full_name_bn LIKE @term OR p.phone LIKE @term OR p.code LIKE @term OR p.full_name_fold LIKE @fold)`)
+    /* The visit reason and notes are searchable as well — front desks look appointments up by what the
+       patient is coming for, in either script. */
+    clauses.push(
+      `(p.full_name LIKE @term OR p.full_name_bn LIKE @term OR p.phone LIKE @term OR p.code LIKE @term
+        OR p.full_name_fold LIKE @fold OR COALESCE(a.reason, '') LIKE @term OR COALESCE(a.notes, '') LIKE @term)`
+    )
     params.term = term
     params.fold = fold
   }

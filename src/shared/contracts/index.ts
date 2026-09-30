@@ -9,6 +9,8 @@ import { inventoryChannels } from './inventory'
 import { accountingChannels } from './accounting'
 import { printingChannels } from './printing'
 import { backupChannels } from './backup'
+import { notificationsChannels } from './notifications'
+import { searchChannels } from './search'
 
 /**
  * The complete IPC channel registry. `CHANNELS` is the single source of truth for:
@@ -29,6 +31,8 @@ export const CHANNELS = {
   ...accountingChannels,
   ...printingChannels,
   ...backupChannels,
+  ...notificationsChannels,
+  ...searchChannels,
   ...dashboardChannels
 } as const
 
@@ -47,3 +51,5 @@ export * from './inventory'
 export * from './accounting'
 export * from './printing'
 export * from './backup'
+export * from './notifications'
+export * from './search'

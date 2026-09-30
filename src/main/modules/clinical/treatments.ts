@@ -108,7 +108,7 @@ export function listTreatments(
     params.category = filter.category
   }
   if (filter.search && filter.search.trim().length > 0) {
-    clauses.push('(name_fold LIKE @search OR name LIKE @searchRaw OR code LIKE @searchRaw)')
+    clauses.push('(name_fold LIKE @search OR name LIKE @searchRaw OR COALESCE(name_bn, \'\') LIKE @searchRaw OR code LIKE @searchRaw)')
     params.search = `%${foldForSearch(filter.search.trim())}%`
     params.searchRaw = `%${filter.search.trim()}%`
   }
