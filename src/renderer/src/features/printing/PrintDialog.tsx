@@ -39,7 +39,7 @@ export function PrintDialog({ open, target, onClose, onPrinted }: PrintDialogPro
   const profiles = useInvoke('printing.profiles', { includeInactive: false }, { enabled: open })
   const catalog = useInvoke('printing.documents', {}, { enabled: open })
 
-  const [printerName, setPrinterName] = useState('')
+  const [printerChoice, setPrinterChoice] = useState('')
   const [profileId, setProfileId] = useState('')
   const [paperClass, setPaperClass] = useState<PrintPaperClass | ''>('')
   const [copies, setCopies] = useState('1')
@@ -98,7 +98,7 @@ export function PrintDialog({ open, target, onClose, onPrinted }: PrintDialogPro
     setDocument(null)
     setFailure(null)
     setLastOutcome(null)
-    setPrinterName('')
+    setPrinterChoice('')
     setProfileId('')
     setPaperClass('')
     setCopies('1')
@@ -109,10 +109,14 @@ export function PrintDialog({ open, target, onClose, onPrinted }: PrintDialogPro
     void render()
   }, [open, render])
 
-  useEffect(() => {
-    if (!open || printerName !== '' || !printers.data) return
-    setPrinterName(printers.data.defaultPrinter ?? printers.data.printers[0]?.name ?? '')
-  }, [open, printers.data, printerName])
+  /*
+   * The printer that will receive the document, derived while rendering: the operator's own choice, else
+   * the default printer, else the first installed. Assigning it from an effect let the select display a
+   * printer (a native select shows its first option when its value matches none) while the dialog still
+   * held none, and the document then went to whatever the system considered default.
+   */
+  const defaultPrinterName = printers.data?.defaultPrinter ?? printers.data?.printers[0]?.name ?? ''
+  const printerName = printerChoice !== '' ? printerChoice : defaultPrinterName
 
   const print = async (): Promise<void> => {
     setBusy(true)
@@ -202,7 +206,7 @@ export function PrintDialog({ open, target, onClose, onPrinted }: PrintDialogPro
                   <Select
                     id="print-printer"
                     value={printerName}
-                    onChange={setPrinterName}
+                    onChange={setPrinterChoice}
                     options={printerOptions.length > 0 ? printerOptions : [{ value: '', label: 'No printer available — save as PDF' }]}
                     ariaLabel="Printer"
                   />

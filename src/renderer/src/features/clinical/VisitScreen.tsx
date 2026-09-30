@@ -47,7 +47,7 @@ export function VisitScreen(): ReactNode {
 
   const [busy, setBusy] = useState(false)
   const [lineDialog, setLineDialog] = useState<{ open: boolean, line: VisitTreatment | null }>({ open: false, line: null })
-  const [chartCondition, setChartCondition] = useState('')
+  const [chartConditionChoice, setChartConditionChoice] = useState('')
 
   const visit = useInvoke('visits.get', { id: visitId })
   const chart = useInvoke('chart.get', { patientId: visit.data?.patientId ?? 0 }, { enabled: (visit.data?.patientId ?? 0) > 0 })
@@ -84,10 +84,15 @@ export function VisitScreen(): ReactNode {
     setVisitTime(new Date(data.visitAt).toTimeString().slice(0, 5))
   }, [visit.data])
 
-  useEffect(() => {
-    const conditions = chart.data?.conditions ?? []
-    if (chartCondition === '' && conditions.length > 0) setChartCondition(conditions[0]?.code ?? '')
-  }, [chart.data, chartCondition])
+  /*
+   * The condition a tooth click records is derived while rendering — the operator's own choice, else the
+   * first active condition — so the select can never display a condition the visit does not hold.
+   */
+  const chartConditionOptions = useMemo(
+    () => (chart.data?.conditions ?? []).filter((condition) => condition.isActive).map((condition) => ({ value: condition.code, label: condition.name })),
+    [chart.data]
+  )
+  const chartCondition = chartConditionChoice !== '' ? chartConditionChoice : chartConditionOptions[0]?.value ?? ''
 
   const save = async (status?: 'draft' | 'final'): Promise<void> => {
     const data = visit.data
@@ -490,9 +495,9 @@ export function VisitScreen(): ReactNode {
                   <div className="stack">
                     <Select
                       value={chartCondition}
-                      onChange={setChartCondition}
+                      onChange={setChartConditionChoice}
                       ariaLabel="Condition"
-                      options={(chart.data?.conditions ?? []).filter((condition) => condition.isActive).map((condition) => ({ value: condition.code, label: condition.name }))}
+                      options={chartConditionOptions}
                     />
                     <ToothGrid
                       dentition="adult"

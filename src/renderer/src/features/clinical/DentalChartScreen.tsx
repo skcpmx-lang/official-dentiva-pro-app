@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, History, Smile, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader, Segmented, Toolbar } from '../../components/ui/primitives'
-import { Field, Select, TextInput } from '../../components/ui/form'
+import { Field, Select, TextInput, type SelectOption } from '../../components/ui/form'
 import { Drawer, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { useFormatters } from '../../lib/format'
 import { usePermission } from '../../store/appStore'
 import { ToothGrid } from './ToothGrid'
-import type {ChartEntry } from '../../lib/types'
+import type { ChartEntry } from '../../lib/types'
 
 type DentitionChoice = 'adult' | 'primary'
 
@@ -28,7 +28,7 @@ export function DentalChartScreen(): ReactNode {
   const canDelete = usePermission('clinical.edit')
 
   const [dentition, setDentition] = useState<DentitionChoice>('adult')
-  const [conditionCode, setConditionCode] = useState('')
+  const [conditionChoice, setConditionChoice] = useState('')
   const [note, setNote] = useState('')
   const [busyTooth, setBusyTooth] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -48,9 +48,25 @@ export function DentalChartScreen(): ReactNode {
     [activeConditions]
   )
 
-  useEffect(() => {
-    if (conditionCode === '' && palette.findings.length > 0) setConditionCode(palette.findings[0]?.code ?? '')
-  }, [palette.findings, conditionCode])
+  const conditionOptions = useMemo<SelectOption[]>(
+    () => [
+      ...palette.findings.map((condition) => ({ value: condition.code, label: `Finding · ${condition.name}` })),
+      ...palette.treatments.map((condition) => ({ value: condition.code, label: `Treatment · ${condition.name}` })),
+      ...palette.states.map((condition) => ({ value: condition.code, label: `State · ${condition.name}` }))
+    ],
+    [palette]
+  )
+
+  /*
+   * A condition is always both shown and in force: the operator's own choice, or the palette's first
+   * finding until they make one. Deriving it while rendering rather than assigning it from an effect is
+   * deliberate — the select is a native control that displays its first option when its value matches
+   * none, so while the assignment was pending the screen showed “Caries” selected, the “Mark a tooth
+   * resolved” button stayed disabled and the first click on a tooth answered “Choose a condition
+   * first”. Deriving keeps what the screen shows and what a tooth click records the same value, always.
+   */
+  const chosen = conditionOptions.some((option) => option.value === conditionChoice)
+  const conditionCode = chosen ? conditionChoice : conditionOptions[0]?.value ?? ''
 
   const history = useInvoke('chart.history', { patientId, toothCode: historyTooth ?? undefined }, { enabled: historyOpen })
 
@@ -179,16 +195,7 @@ export function DentalChartScreen(): ReactNode {
             <CardHeader title="Record a condition" subtitle="Choose what to record, then click the tooth." />
             <CardBody>
               <div className="stack">
-                <Select
-                  value={conditionCode}
-                  onChange={setConditionCode}
-                  ariaLabel="Condition"
-                  options={[
-                    ...palette.findings.map((condition) => ({ value: condition.code, label: `Finding · ${condition.name}` })),
-                    ...palette.treatments.map((condition) => ({ value: condition.code, label: `Treatment · ${condition.name}` })),
-                    ...palette.states.map((condition) => ({ value: condition.code, label: `State · ${condition.name}` }))
-                  ]}
-                />
+                <Select value={conditionCode} onChange={setConditionChoice} ariaLabel="Condition" options={conditionOptions} />
                 <Field label="Note (optional)" htmlFor="chartNote" hint="Printed in the chart history and visible on the tooth tooltip.">
                   <TextInput id="chartNote" value={note} onChange={setNote} maxLength={300} />
                 </Field>

@@ -31,7 +31,7 @@ export function ReportsScreen(): ReactNode {
   const canExport = usePermission('accounting.export')
   const canPrint = usePermission('printing.print')
 
-  const [key, setKey] = useState('revenue_daily')
+  const [keyChoice, setKeyChoice] = useState('revenue_daily')
   const [range, setRange] = useState<RangeKey>('last30')
   const [running, setRunning] = useState(false)
   const [report, setReport] = useState<ReportResult | null>(null)
@@ -40,10 +40,17 @@ export function ReportsScreen(): ReactNode {
 
   const catalog = useInvoke('reports.catalog', {})
 
-  useEffect(() => {
-    const first = catalog.data?.[0]
-    if (first && !catalog.data?.some((entry: ReportCatalogEntry) => entry.key === key)) setKey(first.key)
-  }, [catalog.data, key])
+  /*
+   * The report the screen will run, derived while rendering: the operator's choice while the catalogue
+   * offers it, else the catalogue's first entry. Assigning that fallback from an effect left the select
+   * showing one report (a native select shows its first option when its value matches none) while the
+   * screen ran another.
+   */
+  const key = useMemo(() => {
+    if (!catalog.data || catalog.data.length === 0) return keyChoice
+    if (catalog.data.some((entry: ReportCatalogEntry) => entry.key === keyChoice)) return keyChoice
+    return catalog.data[0]!.key
+  }, [catalog.data, keyChoice])
 
   const definition = useMemo(() => catalog.data?.find((entry: ReportCatalogEntry) => entry.key === key) ?? null, [catalog.data, key])
 
@@ -116,7 +123,7 @@ export function ReportsScreen(): ReactNode {
           <div className="row" style={{ gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <Select
               value={key}
-              onChange={(value: string) => setKey(value)}
+              onChange={setKeyChoice}
               options={(catalog.data ?? []).map((entry: ReportCatalogEntry) => ({ value: entry.key, label: entry.title }))}
               ariaLabel="Report"
             />

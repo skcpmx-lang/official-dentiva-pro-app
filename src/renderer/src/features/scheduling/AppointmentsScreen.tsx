@@ -386,7 +386,7 @@ function AppointmentDialog({
   const [patientSearch, setPatientSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [patientId, setPatientId] = useState('')
-  const [dentistId, setDentistId] = useState('')
+  const [dentistChoice, setDentistChoice] = useState('')
   const [date, setDate] = useState<string | null>(toLocalDate(Date.now()))
   const [time, setTime] = useState<string | null>('10:00')
   const [duration, setDuration] = useState(20)
@@ -402,6 +402,15 @@ function AppointmentDialog({
 
   const dentists = useInvoke('dentists.list', { includeInactive: false })
   const patients = useInvoke('patients.list', { search: debounced === '' ? undefined : debounced, status: 'active', limit: 25, offset: 0 }, { enabled: open && !isReschedule })
+
+  /*
+   * The dentist the appointment is for, derived while rendering: the operator's own choice, else the
+   * booking's dentist when rescheduling, else the first dentist. The free slots below are computed from
+   * this same value, so the slots shown always belong to the dentist the dialog displays.
+   */
+  const dentistOptions = useMemo(() => (dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName })), [dentists.data])
+  const bookedDentist = appointment ? String(appointment.dentistId) : ''
+  const dentistId = dentistChoice !== '' ? dentistChoice : bookedDentist !== '' ? bookedDentist : dentistOptions[0]?.value ?? ''
   const slots = useInvoke(
     'appointments.slots',
     { date: date ?? toLocalDate(Date.now()), dentistId: Number(dentistId) || 0, durationMin: duration },
@@ -414,7 +423,7 @@ function AppointmentDialog({
     setSlotAt(null)
     if (appointment) {
       setPatientId(String(appointment.patientId))
-      setDentistId(String(appointment.dentistId))
+      setDentistChoice(String(appointment.dentistId))
       setDate(instantToDateInput(appointment.scheduledAt))
       setTime(new Date(appointment.scheduledAt).toTimeString().slice(0, 5))
       setDuration(appointment.durationMin)
@@ -422,7 +431,7 @@ function AppointmentDialog({
       return
     }
     setPatientId('')
-    setDentistId(dentists.data && dentists.data.length > 0 ? String(dentists.data[0]?.id) : '')
+    setDentistChoice(dentists.data && dentists.data.length > 0 ? String(dentists.data[0]?.id) : '')
     setDate(toLocalDate(Date.now()))
     setTime('10:00')
     setDuration(20)
@@ -430,9 +439,6 @@ function AppointmentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, appointment])
 
-  useEffect(() => {
-    if (!appointment && dentistId === '' && dentists.data && dentists.data.length > 0) setDentistId(String(dentists.data[0]?.id))
-  }, [dentists.data, dentistId, appointment])
 
   const submit = async (): Promise<void> => {
     if (patientId === '') {
@@ -525,12 +531,12 @@ function AppointmentDialog({
               id="appointmentDentist"
               value={dentistId}
               onChange={(value: string) => {
-                setDentistId(value)
+                setDentistChoice(value)
                 setSlotAt(null)
               }}
               ariaLabel="Dentist"
               disabled={isReschedule}
-              options={(dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName }))}
+              options={dentistOptions}
             />
           </Field>
           <Field label="Duration (minutes)" htmlFor="appointmentDuration">

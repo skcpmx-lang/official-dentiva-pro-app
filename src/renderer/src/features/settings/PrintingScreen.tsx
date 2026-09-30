@@ -484,7 +484,7 @@ function ArchiveProfileDialog({
 }
 
 function TestPageDialog({ open, printers, onClose }: { open: boolean; printers: PrinterStatus['printers']; onClose(): void }): ReactNode {
-  const [printerName, setPrinterName] = useState('')
+  const [printerChoice, setPrinterChoice] = useState('')
   const [paperClass, setPaperClass] = useState<PrintPaperClass>('a4')
   const [thermalWidthMm, setThermalWidthMm] = useState<58 | 80>(80)
   const [busy, setBusy] = useState(false)
@@ -493,8 +493,12 @@ function TestPageDialog({ open, printers, onClose }: { open: boolean; printers: 
   useEffect(() => {
     if (!open) return
     setFailure(null)
-    setPrinterName(printers.find((printer) => printer.isDefault)?.name ?? printers[0]?.name ?? '')
-  }, [open, printers])
+    setPrinterChoice('')
+  }, [open])
+
+  /* Derived while rendering: the chosen printer, else the default, else the first installed. */
+  const printerOptions = useMemo(() => printers.map((printer) => ({ value: printer.name, label: printer.name })), [printers])
+  const printerName = printerChoice !== '' ? printerChoice : printers.find((printer) => printer.isDefault)?.name ?? printerOptions[0]?.value ?? ''
 
   const print = async (): Promise<void> => {
     setBusy(true)
@@ -537,7 +541,7 @@ function TestPageDialog({ open, printers, onClose }: { open: boolean; printers: 
           <Select
             id="test-printer"
             value={printerName}
-            onChange={setPrinterName}
+            onChange={setPrinterChoice}
             options={printers.length === 0 ? [{ value: '', label: 'No printer available' }] : printers.map((printer) => ({ value: printer.name, label: printer.displayName }))}
             ariaLabel="Printer"
           />

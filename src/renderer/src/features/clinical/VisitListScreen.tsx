@@ -266,7 +266,7 @@ function NewVisitDialog({ open, onClose, onCreated }: { open: boolean; onClose()
   const [patientSearch, setPatientSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [patientId, setPatientId] = useState('')
-  const [dentistId, setDentistId] = useState('')
+  const [dentistChoice, setDentistChoice] = useState('')
 
   useEffect(() => {
     const handle = window.setTimeout(() => setDebounced(patientSearch.trim()), 250)
@@ -315,13 +315,13 @@ function NewVisitDialog({ open, onClose, onCreated }: { open: boolean; onClose()
     })
     setPatientSearch('')
     setPatientId('')
-    setDentistId('')
+    setDentistChoice('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  useEffect(() => {
-    if (dentistId === '' && dentists.data && dentists.data.length > 0) setDentistId(String(dentists.data[0]?.id))
-  }, [dentists.data, dentistId])
+  /* Derived while rendering, so the dentist the dialog shows is the dentist the visit is saved with. */
+  const dentistOptions = useMemo(() => (dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName })), [dentists.data])
+  const dentistId = dentistChoice !== '' ? dentistChoice : dentistOptions[0]?.value ?? ''
 
   const start = async (): Promise<void> => {
     if (patientId === '') {
@@ -390,13 +390,7 @@ function NewVisitDialog({ open, onClose, onCreated }: { open: boolean; onClose()
         </Field>
         <div className="grid grid--2">
           <Field label="Dentist" htmlFor="visitDentist" required>
-            <Select
-              id="visitDentist"
-              value={dentistId}
-              onChange={setDentistId}
-              options={(dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName }))}
-              ariaLabel="Dentist"
-            />
+            <Select id="visitDentist" value={dentistId} onChange={setDentistChoice} options={dentistOptions} ariaLabel="Dentist" />
           </Field>
           <Field label="Chief complaint" htmlFor="visitComplaint">
             <TextInput

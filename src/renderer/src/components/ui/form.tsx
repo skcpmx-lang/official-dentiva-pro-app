@@ -205,6 +205,16 @@ export interface SelectOption {
   disabled?: boolean
 }
 
+/*
+ * A native select displays its first option when its value matches none — and that is how a controlled
+ * control tells a lie. In this application it already did: the dental chart showed a condition as
+ * chosen while the chart itself held none, so the first click on a tooth was refused with “choose a
+ * condition first”. When the value matches no option — including the empty value that means “nothing
+ * chosen yet” — the control now renders a placeholder option instead of borrowing the first one, so what
+ * the screen shows is what the application holds. Screens that mean something by empty (a filter that
+ * means “all”, say) give the empty value its own option; screens that intend a default derive it while
+ * rendering rather than assigning it from an effect.
+ */
 export function Select({
   id,
   value,
@@ -231,7 +241,9 @@ export function Select({
       aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
     >
-      {placeholder ? <option value="">{placeholder}</option> : null}
+      {placeholder !== undefined || !options.some((option) => option.value === value) ? (
+        <option value="">{placeholder ?? 'Not selected'}</option>
+      ) : null}
       {options.map((option, index) => (
         /* Index-qualified key: call sites may legitimately repeat a value (group headings). */
         <option key={`${index}-${option.value}`} value={option.value} disabled={option.disabled}>

@@ -104,7 +104,7 @@ export function PrescriptionScreen(): ReactNode {
   const mode: 'new' | 'edit' | 'view' = prescriptionId === null ? 'new' : canEdit ? 'edit' : 'view'
 
   const [patientId, setPatientId] = useState(searchParams.get('patientId') ?? '')
-  const [dentistId, setDentistId] = useState(searchParams.get('dentistId') ?? '')
+  const [dentistChoice, setDentistChoice] = useState(searchParams.get('dentistId') ?? '')
   const visitId = searchParams.get('visitId') ?? ''
   const [patientSearch, setPatientSearch] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -138,7 +138,7 @@ export function PrescriptionScreen(): ReactNode {
     const data = existing.data
     if (!data) return
     setPatientId(String(data.patientId))
-    setDentistId(String(data.dentistId))
+    setDentistChoice(String(data.dentistId))
     setRxAt(instantToDateInput(data.prescriptionAt))
     setDiagnosis(data.diagnosis ?? '')
     setCcText(data.ccText ?? '')
@@ -150,9 +150,24 @@ export function PrescriptionScreen(): ReactNode {
     setMedicines(data.medicines.length > 0 ? data.medicines.map(toDraft) : [blankMedicine()])
   }, [existing.data])
 
-  useEffect(() => {
-    if (dentistId === '' && dentists.data && dentists.data.length > 0) setDentistId(String(dentists.data[0]?.id))
-  }, [dentists.data, dentistId])
+  /*
+   * The signing dentist, derived while rendering: the operator's own choice, else the first dentist in
+   * the list. Assigning the default from an effect left a window in which the select displayed a dentist
+   * (a native select shows its first option when its value matches none) while the screen still held
+   * none, so the first save answered “choose the signing dentist”.
+   */
+  const dentistOptions = useMemo(() => {
+    const options = (dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName }))
+    const loaded = existing.data
+    /* A prescription written by a dentist since deactivated still names them: keep them selectable so the
+       header shows the dentist the record holds instead of quietly substituting the first in the list. */
+    if (loaded && !options.some((option) => option.value === String(loaded.dentistId))) {
+      options.unshift({ value: String(loaded.dentistId), label: `${loaded.dentistName} (inactive)` })
+    }
+    return options
+  }, [dentists.data, existing.data])
+
+  const dentistId = dentistChoice !== '' ? dentistChoice : dentistOptions[0]?.value ?? ''
 
   const patientOptions = useMemo(
     () => [
@@ -336,8 +351,8 @@ export function PrescriptionScreen(): ReactNode {
                   <Select
                     id="rxDentist"
                     value={dentistId}
-                    onChange={setDentistId}
-                    options={(dentists.data ?? []).map((entry) => ({ value: String(entry.id), label: entry.fullName }))}
+                    onChange={setDentistChoice}
+                    options={dentistOptions}
                     ariaLabel="Dentist"
                     disabled={readOnly}
                   />

@@ -387,6 +387,13 @@ describe('clinical screens', () => {
     expect(screen.getByText('Caries · 1')).toBeInTheDocument()
 
     await waitFor(() => expect(screen.getByLabelText('Condition')).toHaveValue('caries'))
+    /*
+     * A native select shows its first option when its value matches none, so the assertion above also
+     * holds while the screen believes no condition is chosen — and then the first click on a tooth is
+     * refused with “Choose a condition first”. Waiting for the control that is genuinely tied to the
+     * chosen condition keeps the two in step: this is what failed on the slower Windows runner.
+     */
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Mark a tooth resolved' })).toBeEnabled())
     fireEvent.click(screen.getByTitle(/^27 · /))
     await waitFor(() => {
       expect(callLog.some((entry) => entry.channel === 'chart.setEntry')).toBe(true)
