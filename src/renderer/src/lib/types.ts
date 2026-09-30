@@ -131,3 +131,15 @@ export type AccountingKind = AccountingEntry['kind']
 export type ReportResult = ChannelOutput<'reports.run'>
 export type ReportCatalogEntry = ChannelOutput<'reports.catalog'>[number]
 export type ReportCell = ReportResult['rows'][number][string]
+
+/* ------------------------------------------------------------------ printing */
+
+export type PrinterStatus = ChannelOutput<'printing.printers'>
+export type PrintDocumentInfo = ChannelOutput<'printing.documents'>[number]
+export type PrintProfile = ChannelOutput<'printing.profiles'>[number]
+export type PrintProfileInput = InputOf<'printing.profile.save'>
+export type PrintRequestInput = InputOf<'printing.render'>
+export type RenderedPrintDocument = ChannelOutput<'printing.render'>
+export type PrintOutcome = ChannelOutput<'printing.print'>
+export type PrintHistoryEntry = ChannelOutput<'printing.history'>['items'][number]
+export type PrintPaperClass = ChannelOutput<'printing.documents'>[number]['paperClasses'][number]

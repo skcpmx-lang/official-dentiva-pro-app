@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Ban, FileText, Plus, Save, Trash2, Wallet, XCircle } from 'lucide-react'
+import { ArrowLeft, Ban, FileText, Plus, Printer, Save, Trash2, Wallet, XCircle } from 'lucide-react'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader, Switch } from '../../components/ui/primitives'
 import { DateInput, Field, MoneyInput, NumberInput, Select, TextArea, TextInput, dateInputToInstant, instantToDateInput } from '../../components/ui/form'
 import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
@@ -8,6 +8,7 @@ import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { INVOICE_STATUS_META, PAYMENT_METHODS, paymentMethodLabel, useFormatters } from '../../lib/format'
 import { usePermission } from '../../store/appStore'
 import type { Invoice, InvoiceLineInput, PaymentInput } from '../../lib/types'
+import { PrintDialog } from '../printing/PrintDialog'
 
 interface LineDraft {
   key: string
@@ -51,6 +52,8 @@ export function InvoiceScreen(): ReactNode {
   const canPay = usePermission('payments.create')
   const canRefund = usePermission('payments.refund')
   const canVoid = usePermission('billing.void')
+  const canPrint = usePermission('printing.print')
+  const [printOpen, setPrintOpen] = useState(false)
 
   const invoiceId = params.invoiceId ? Number(params.invoiceId) : null
   const [busy, setBusy] = useState(false)
@@ -249,6 +252,11 @@ export function InvoiceScreen(): ReactNode {
             {!readOnly ? (
               <Button variant="primary" icon={<Save size={16} />} loading={busy} onClick={() => void save()}>
                 Save invoice
+              </Button>
+            ) : null}
+            {data && canPrint ? (
+              <Button variant="secondary" icon={<Printer size={16} />} onClick={() => setPrintOpen(true)}>
+                Print invoice
               </Button>
             ) : null}
             {data && canPay && data.status !== 'void' && data.dueMicro > 0 ? (
@@ -544,6 +552,13 @@ export function InvoiceScreen(): ReactNode {
           onSaved={() => void invoice.reload()}
         />
       ) : null}
+
+      <PrintDialog
+        open={printOpen}
+        target={{ documentType: 'invoice', entityId: invoiceId, label: data?.invoiceNo }}
+        onClose={() => setPrintOpen(false)}
+        onPrinted={() => void invoice.reload()}
+      />
     </div>
   )
 }

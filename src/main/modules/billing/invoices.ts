@@ -400,6 +400,21 @@ export function saveInvoice(ctx: ServiceContext, input: InvoiceInput): InvoiceRe
  * rewritten. Money already received must be returned first (void the payments), so a void invoice never
  * hides an outstanding balance.
  */
+/** Records a successful paper print of an invoice (the count and time show in the invoice screen). */
+export function markInvoicePrinted(ctx: ServiceContext, id: number, printerName: string): void {
+  assertPermission(ctx, 'billing.view')
+  const now = ctx.now()
+  ctx.db.prepare('UPDATE invoices SET printed_count = printed_count + 1, last_printed_at = ?, updated_at = ? WHERE id = ?').run(now, now, id)
+  ctx.audit.write({
+    module: 'billing',
+    action: 'invoice.print',
+    entityType: 'invoice',
+    entityId: id,
+    summary: `Printed invoice #${id} on ${printerName}`,
+    detail: { printerName }
+  })
+}
+
 export function voidInvoice(ctx: ServiceContext, input: { id: number, reason: string }): InvoiceRecord {
   assertPermission(ctx, 'billing.void')
   const existing = getInvoice(ctx, input.id)

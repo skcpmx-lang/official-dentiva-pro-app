@@ -1,5 +1,5 @@
 import type { Db } from './connection'
-import { SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL, SCHEMA_VERSION } from './schema'
+import { SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL, SCHEMA_V2_SQL, SCHEMA_VERSION } from './schema'
 
 export interface Migration {
   version: number
@@ -21,8 +21,31 @@ export const MIGRATIONS: Migration[] = [
       db.exec(SCHEMA_V1_SQL)
       db.exec(SCHEMA_V1_POST_SQL)
     }
+  },
+  {
+    version: 2,
+    description: 'Printing subsystem: profile notes/author, print action and payload path',
+    up(db: Db): void {
+      addColumnIfMissing(db, 'print_profiles', 'notes', 'TEXT')
+      addColumnIfMissing(db, 'print_profiles', 'created_by', 'INTEGER')
+      addColumnIfMissing(db, 'print_history', 'title', 'TEXT')
+      addColumnIfMissing(db, 'print_history', 'profile_id', 'INTEGER')
+      addColumnIfMissing(db, 'print_history', 'action', "TEXT NOT NULL DEFAULT 'print'")
+      addColumnIfMissing(db, 'print_history', 'payload_path', 'TEXT')
+      db.exec(SCHEMA_V2_SQL)
+    }
   }
 ]
+
+/**
+ * SQLite has no `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`; this guard keeps a re-run of a migration
+ * (or a database that already received the column from a development build) harmless.
+ */
+function addColumnIfMissing(db: Db, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (columns.some((entry) => entry.name === column)) return
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
 
 export function readSchemaVersion(db: Db): number {
   try {

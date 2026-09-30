@@ -8,6 +8,7 @@ import { createSchedulingHandlers } from '@main/ipc/handlers/scheduling'
 import { createBillingHandlers } from '@main/ipc/handlers/billing'
 import { createInventoryHandlers } from '@main/ipc/handlers/inventory'
 import { createAccountingHandlers } from '@main/ipc/handlers/accounting'
+import { createPrintingHandlers } from '@main/ipc/handlers/printing'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
@@ -46,6 +47,7 @@ function collectHandlers(): Set<string> {
     createBillingHandlers(deps),
     createInventoryHandlers(deps),
     createAccountingHandlers(deps),
+    createPrintingHandlers(deps),
     createDashboardHandlers()
   ]
   const keys = new Set<string>()

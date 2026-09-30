@@ -105,6 +105,12 @@ function loadPayment(ctx: ServiceContext, id: number): PaymentRecord {
   return mapPayment(row)
 }
 
+/** Loads one receipt by id (used by receipt printing and the payment screen). */
+export function getPayment(ctx: ServiceContext, id: number): PaymentRecord {
+  assertPermission(ctx, 'payments.view')
+  return loadPayment(ctx, id)
+}
+
 export function listPayments(ctx: ServiceContext, filter: PaymentFilter): {
   items: PaymentRecord[]
   total: number

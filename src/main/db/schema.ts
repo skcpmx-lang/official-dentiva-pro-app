@@ -8,7 +8,7 @@
  *  · every searchable text column has a `*_fold` companion produced by `foldForSearch()`
  */
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export const SCHEMA_V1_SQL = /* sql */ `
 ------------------------------------------------------------------------------
@@ -944,6 +944,24 @@ LEFT JOIN inventory_movements m ON m.item_id = i.id
 WHERE i.is_deleted = 0
 GROUP BY i.id;
 `
+
+/**
+ * Schema v2 — printing subsystem extensions.
+ *
+ * The v1 schema already carried the printer-profile and print-history tables. This migration makes them
+ * complete for the shipped printing engine: profiles gain a unique name (so "A4 prescription" cannot be
+ * created twice), a note and the author, and history gains the action (print/PDF/test), the profile used,
+ * a human title and the path of the stored document payload. The payload is what makes a failed print
+ * recoverable: the document is written next to the database, so the operator can retry or save it as PDF
+ * without re-creating the record.
+ *
+ * Additive only — no column is dropped and no historical row is touched.
+ */
+export const SCHEMA_V2_SQL = /* sql */ `
+CREATE UNIQUE INDEX IF NOT EXISTS idx_print_profiles_name
+  ON print_profiles(name COLLATE NOCASE) WHERE is_deleted = 0;
+CREATE INDEX IF NOT EXISTS idx_print_history_result ON print_history(result, printed_at DESC);
+`;
 
 /**
  * Statements applied after the base DDL to make an existing v1 database consistent with the current

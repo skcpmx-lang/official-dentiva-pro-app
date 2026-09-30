@@ -7,6 +7,7 @@ import { schedulingChannels } from './scheduling'
 import { billingChannels } from './billing'
 import { inventoryChannels } from './inventory'
 import { accountingChannels } from './accounting'
+import { printingChannels } from './printing'
 
 /**
  * The complete IPC channel registry. `CHANNELS` is the single source of truth for:
@@ -25,6 +26,7 @@ export const CHANNELS = {
   ...billingChannels,
   ...inventoryChannels,
   ...accountingChannels,
+  ...printingChannels,
   ...dashboardChannels
 } as const
 
@@ -41,3 +43,4 @@ export * from './scheduling'
 export * from './billing'
 export * from './inventory'
 export * from './accounting'
+export * from './printing'

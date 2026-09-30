@@ -23,6 +23,7 @@ import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { GENDERS, useFormatters } from '../../lib/format'
 import { readFileAsBase64 } from '../../lib/files'
+import { PrintDialog } from '../printing/PrintDialog'
 import { usePermission } from '../../store/appStore'
 import type { PatientAttachment, Referral, TimelineEntry } from '../../lib/types'
 
@@ -51,6 +52,7 @@ export function PatientProfileScreen(): ReactNode {
 
   const canEdit = usePermission('patients.edit')
   const canPrint = usePermission('printing.print')
+  const [printOpen, setPrintOpen] = useState(false)
   const canSeeBilling = usePermission('billing.view')
 
   const summary = useInvoke('patients.summary', { id: patientId }, { enabled: Number.isFinite(patientId) })
@@ -234,7 +236,7 @@ export function PatientProfileScreen(): ReactNode {
               </Button>
             ) : null}
             {canPrint ? (
-              <Button variant="tertiary" icon={<FileText size={16} />} onClick={() => toast('info', 'Patient summary printing arrives with the printing module')}>
+              <Button variant="tertiary" icon={<FileText size={16} />} onClick={() => setPrintOpen(true)}>
                 Print summary
               </Button>
             ) : null}
@@ -575,6 +577,11 @@ export function PatientProfileScreen(): ReactNode {
 
       <UploadAttachmentDialog open={uploadOpen} patientId={patientId} onClose={() => setUploadOpen(false)} onUploaded={() => void attachments.reload()} />
       <ReferralDialog open={referralOpen} patientId={patientId} onClose={() => setReferralOpen(false)} onSaved={() => void referrals.reload()} />
+      <PrintDialog
+        open={printOpen}
+        target={{ documentType: 'patient_summary', entityId: patientId, label: patient?.fullName }}
+        onClose={() => setPrintOpen(false)}
+      />
     </div>
   )
 }

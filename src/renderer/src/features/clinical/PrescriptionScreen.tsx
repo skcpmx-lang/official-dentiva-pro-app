@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, BookMarked, Copy, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookMarked, Copy, Plus, Printer, Save, Sparkles, Trash2 } from 'lucide-react'
 import { MEDICINE_TIMINGS, PRESCRIPTION_FORMS } from '@shared/contracts'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
 import { DateInput, Field, Select, TextArea, TextInput, dateInputToInstant, instantToDateInput } from '../../components/ui/form'
 import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { MEDICINE_FORM_LABELS, MEDICINE_TIMING_LABELS, useFormatters } from '../../lib/format'
+import { PrintDialog } from '../printing/PrintDialog'
 import { usePermission } from '../../store/appStore'
 import type { MedicineHistoryEntry, PrescriptionTemplate } from '../../lib/types'
 
@@ -263,6 +264,8 @@ export function PrescriptionScreen(): ReactNode {
   }
 
   const data = existing.data
+  const canPrint = usePermission('printing.print')
+  const [printOpen, setPrintOpen] = useState(false)
   const readOnly = mode === 'view' || (data !== null && mode === 'edit' && data.printedCount > 0 && !canEdit)
 
   return (
@@ -289,6 +292,11 @@ export function PrescriptionScreen(): ReactNode {
                   Save prescription
                 </Button>
               </>
+            ) : null}
+            {data && canPrint ? (
+              <Button variant="secondary" icon={<Printer size={16} />} onClick={() => setPrintOpen(true)}>
+                Print
+              </Button>
             ) : null}
             {data ? (
               <Button variant="secondary" icon={<Copy size={16} />} onClick={() => void duplicate()}>
@@ -532,6 +540,13 @@ export function PrescriptionScreen(): ReactNode {
           </ul>
         )}
       </Modal>
+
+      <PrintDialog
+        open={printOpen}
+        target={{ documentType: 'prescription', entityId: data?.id ?? null, label: data?.rxNo }}
+        onClose={() => setPrintOpen(false)}
+        onPrinted={() => void existing.reload()}
+      />
     </div>
   )
 }
