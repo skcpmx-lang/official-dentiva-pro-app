@@ -54,6 +54,7 @@ export function InvoiceScreen(): ReactNode {
   const canVoid = usePermission('billing.void')
   const canPrint = usePermission('printing.print')
   const [printOpen, setPrintOpen] = useState(false)
+  const [receipt, setReceipt] = useState<{ id: number, receiptNo: string } | null>(null)
 
   const invoiceId = params.invoiceId ? Number(params.invoiceId) : null
   const [busy, setBusy] = useState(false)
@@ -468,11 +469,18 @@ export function InvoiceScreen(): ReactNode {
                             {payment.reference ? ` · ref ${payment.reference}` : ''}
                           </span>
                         </span>
-                        {canVoid && payment.status !== 'void' ? (
-                          <Button size="sm" variant="ghost" icon={<Ban size={15} />} aria-label={`Void receipt ${payment.receiptNo}`} onClick={() => void voidPayment(payment.id, payment.receiptNo)}>
-                            Void
-                          </Button>
-                        ) : null}
+                        <span className="row" style={{ gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                          {canPrint && payment.status !== 'void' ? (
+                            <Button size="sm" variant="ghost" icon={<Printer size={15} />} aria-label={`Print receipt ${payment.receiptNo}`} onClick={() => setReceipt({ id: payment.id, receiptNo: payment.receiptNo })}>
+                              Print
+                            </Button>
+                          ) : null}
+                          {canVoid && payment.status !== 'void' ? (
+                            <Button size="sm" variant="ghost" icon={<Ban size={15} />} aria-label={`Void receipt ${payment.receiptNo}`} onClick={() => void voidPayment(payment.id, payment.receiptNo)}>
+                              Void
+                            </Button>
+                          ) : null}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -557,6 +565,13 @@ export function InvoiceScreen(): ReactNode {
         open={printOpen}
         target={{ documentType: 'invoice', entityId: invoiceId, label: data?.invoiceNo }}
         onClose={() => setPrintOpen(false)}
+        onPrinted={() => void invoice.reload()}
+      />
+
+      <PrintDialog
+        open={receipt !== null}
+        target={{ documentType: 'payment_receipt', entityId: receipt?.id ?? null, label: receipt?.receiptNo }}
+        onClose={() => setReceipt(null)}
         onPrinted={() => void invoice.reload()}
       />
     </div>

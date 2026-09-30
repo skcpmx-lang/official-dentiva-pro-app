@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { CalendarCheck, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, Clock, Pencil, Trash2, Users } from 'lucide-react'
+import { CalendarCheck, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, Clock, Pencil, Printer, Trash2, Users } from 'lucide-react'
 import { APPOINTMENT_STATUSES } from '@shared/contracts'
 import { fromLocalDate, toLocalDate } from '@shared/datetime'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader, SearchInput, Segmented, Toolbar } from '../../components/ui/primitives'
@@ -8,6 +8,7 @@ import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { APPOINTMENT_STATUS_META, useFormatters } from '../../lib/format'
 import { usePermission } from '../../store/appStore'
+import { PrintDialog } from '../printing/PrintDialog'
 import type { Appointment, AppointmentInput } from '../../lib/types'
 
 const STATUS_FILTER = [
@@ -34,6 +35,7 @@ export function AppointmentsScreen(): ReactNode {
   const canEdit = usePermission('appointments.edit')
   const canCancel = usePermission('appointments.cancel')
   const canDelete = usePermission('appointments.delete')
+  const canPrint = usePermission('printing.print')
 
   const [date, setDate] = useState(today)
   const [dentist, setDentist] = useState('all')
@@ -42,6 +44,7 @@ export function AppointmentsScreen(): ReactNode {
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
   const [editing, setEditing] = useState<{ open: boolean, appointment: Appointment | null }>({ open: false, appointment: null })
+  const [printing, setPrinting] = useState<Appointment | null>(null)
   const [cancelTarget, setCancelTarget] = useState<{ appointment: Appointment, status: 'cancelled' | 'no_show' } | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
@@ -257,6 +260,11 @@ export function AppointmentsScreen(): ReactNode {
                           Cancel
                         </Button>
                       ) : null}
+                      {canPrint ? (
+                        <Button size="sm" variant="ghost" icon={<Printer size={15} />} aria-label={`Print slip for ${appointment.patientName}`} onClick={() => setPrinting(appointment)}>
+                          Slip
+                        </Button>
+                      ) : null}
                       {canDelete && (appointment.status === 'cancelled' || appointment.status === 'no_show') ? (
                         <Button size="sm" variant="ghost" icon={<Trash2 size={15} />} aria-label={`Delete appointment for ${appointment.patientName}`} onClick={() => void remove(appointment)} />
                       ) : null}
@@ -287,6 +295,13 @@ export function AppointmentsScreen(): ReactNode {
           void day.reload()
           void list.reload()
         }}
+      />
+
+      <PrintDialog
+        open={printing !== null}
+        target={{ documentType: 'appointment_slip', entityId: printing?.id ?? null, label: printing?.patientName }}
+        onClose={() => setPrinting(null)}
+        onPrinted={() => void day.reload()}
       />
     </div>
   )

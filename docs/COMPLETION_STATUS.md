@@ -24,7 +24,7 @@
 | 13 | Accounting Complete | ✅ | `src/main/modules/accounting/{entries,reports}.ts` + `ipc/handlers/accounting.ts` (16 channels) + `features/accounting/AccountingScreen.tsx`, `features/reports/ReportsScreen.tsx`: categorised ledger (system categories protected, duplicates rejected case-insensitively), income/expense entries with void-and-reason, daily close recorded against the counted drawer with variance and reopen-with-reason (a closed day refuses entry changes), 10 report keys returning raw typed rows with matching CSV export; `tests/integration/accounting.test.ts` (6), `tests/renderer/accounting-ui.test.tsx` (9) |
 | 14 | Administration Complete | ✅ | `src/main/modules/{staff,users,roles}/service.ts` + `ipc/handlers/practice.ts` (staff 5, users 7, roles 4 channels) + `features/settings/{StaffScreen,UsersScreen,RolesScreen}.tsx`: employment register with photo and archive-with-reason (archiving is refused while a login is linked), account creation with scrypt hashes and the clinic password policy, reset/unlock/login history, last-active-owner protection, self-deactivation guard, typed-username deletion, custom roles with the full permission matrix (built-in identifiers frozen, in-use roles protected); `tests/integration/{staff,users,roles}.test.ts` (22), `tests/renderer/staff-ui.test.tsx` (4) |
 | 15 | Backup/Restore Complete | ⏳ | |
-| 16 | Printing/PDF Complete | ✅ | `src/main/printing/{fonts,templates,documents,profiles,jobs}.ts` + `ipc/handlers/printing.ts` (13 channels) + `features/printing/{PrintDialog,PrintHistoryScreen}.tsx`, `features/settings/PrintingScreen.tsx`: one HTML engine for preview/print/PDF with the bundled Inter + Noto Sans Bengali faces embedded (paper-aware a4/a5/thermal 58|80/mini/custom layouts), printer enumeration and test page, profiles with a single default per document type, every attempt in the print history, and a refused printer never loses the document (payload kept under `dataDir/print-jobs`, retention 40, retry or Save-as-PDF); `tests/integration/printing.test.ts` (4), `tests/renderer/{printing-ui,printing-settings}.test.tsx` (4) |
+| 16 | Printing/PDF Complete | ✅ | `src/main/printing/{fonts,templates,documents,profiles,jobs}.ts` + `ipc/handlers/printing.ts` (13 channels) + `features/printing/{PrintDialog,PrintHistoryScreen}.tsx`, `features/settings/PrintingScreen.tsx`: one HTML engine for preview/print/PDF with the bundled Inter + Noto Sans Bengali faces embedded (paper-aware a4/a5/thermal 58|80/mini/custom layouts), printer enumeration and test page, profiles with a single default per document type, every attempt in the print history, and a refused printer never loses the document (payload kept under `dataDir/print-jobs`, retention 40, retry or Save-as-PDF); print surfaces on the prescription, invoice, payment receipt, appointment slip, patient profile and reports screens; `docs/PRINTING_VERIFICATION.md` separates what is verified here from what the Windows runner must verify; `tests/integration/printing.test.ts` (4), `tests/renderer/{printing-ui,printing-settings,printing-surfaces}.test.tsx` (7) |
 | 17 | Notifications/Search/Reports Complete | ⏳ | |
 | 18 | Security audit | ⏳ | |
 | 19 | UI/UX visual audit | ⏳ | |
@@ -40,7 +40,7 @@
 |---|---|---|---|---|---|
 | Unit | 3 | 3 | 0 | 0 | `tests/unit/channels.test.ts` (registry ↔ handler parity, channel naming, clinical + scheduling + billing + inventory namespaces) |
 | Integration | 89 | 89 | 0 | 0 | `database.test.ts` (4), `patients.test.ts` (7), `clinical.test.ts` (15), `scheduling.test.ts` (11), `billing.test.ts` (9), `inventory.test.ts` (11), `accounting.test.ts` (6), `staff.test.ts` (6), `users.test.ts` (9), `roles.test.ts` (7), `printing.test.ts` (4) |
-| Renderer | 45 | 45 | 0 | 0 | `activation.test.tsx` (4), `rbac-ui.test.tsx` (4), `clinical-ui.test.tsx` (5), `scheduling-ui.test.tsx` (4), `billing-ui.test.tsx` (6), `inventory-ui.test.tsx` (5), `accounting-ui.test.tsx` (9), `staff-ui.test.tsx` (4), `printing-ui.test.tsx` (2), `printing-settings.test.tsx` (2) |
+| Renderer | 48 | 48 | 0 | 0 | `activation.test.tsx` (4), `rbac-ui.test.tsx` (4), `clinical-ui.test.tsx` (5), `scheduling-ui.test.tsx` (4), `billing-ui.test.tsx` (6), `inventory-ui.test.tsx` (5), `accounting-ui.test.tsx` (9), `staff-ui.test.tsx` (4), `printing-ui.test.tsx` (2), `printing-settings.test.tsx` (2), `printing-surfaces.test.tsx` (3) |
 | E2E | – | – | – | – | Playwright workflows run against the packaged Windows build in CI |
 | Stress | – | – | – | – | dataset generators scheduled with checkpoint 20 |
 
@@ -58,12 +58,12 @@
 
 | ID | Severity | Description | Status |
 |---|---|---|---|
-| – | – | none yet | – |
+| ISSUE-001 | Low | `resolveProfileFor(…, profileId)` loads the profile through `getPrintProfile`, which requires `printing.configure`; a print-only user who explicitly picks a profile could be refused. The print dialog only sends `profileId` when the operator chooses one, so default printing is unaffected. | open — decide whether to relax the lookup to `printing.print` with a read-only helper |
 
 ## Next actions
 
 1. Backup/restore with pre-restore backup, validation, rollback and retention (checkpoint 15).
-2. Report PDF output from the reports screen, receipt printing from the payment dialog and appointment-slip printing (the document types and engine already exist; the remaining surfaces get wired as the reports checkpoint lands).
-3. Notifications, global search and the remaining settings screens (checkpoint 17).
-4. Remaining test layers: unit suites for money/datetime/Bengali/activation, the 10 named E2E workflows, negative tests and stress datasets.
+2. Notifications, global search and the remaining settings screens (checkpoint 17).
+3. Remaining test layers: unit suites for money/datetime/Bengali/activation, the 10 named E2E workflows, negative tests and stress datasets.
+4. Repository infrastructure that package.json already references but that does not exist yet: `.github/workflows` (CI, Windows E2E, release), `electron-builder.yml`, `scripts/**` (icons, audits, stress seed, checksums) and `LICENSE.txt`.
 5. Audits and the Windows release build from CI (checkpoints 18-24).

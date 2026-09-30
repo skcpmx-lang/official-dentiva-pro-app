@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { BarChart3, Download, Play } from 'lucide-react'
+import { BarChart3, Download, Play, Printer } from 'lucide-react'
 import { Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
 import { Select } from '../../components/ui/form'
 import { DataTable, type Column } from '../../components/ui/DataTable'
@@ -7,6 +7,7 @@ import { toast } from '../../components/ui/overlay'
 import { formatBDT } from '@shared/money'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { usePermission } from '../../store/appStore'
+import { PrintDialog } from '../printing/PrintDialog'
 import type { ReportCatalogEntry, ReportCell, ReportResult } from '../../lib/types'
 
 const RANGE_OPTIONS = [
@@ -28,12 +29,14 @@ type RangeKey = 'last30' | 'thisMonth' | 'last90' | 'lastYear' | 'today'
  */
 export function ReportsScreen(): ReactNode {
   const canExport = usePermission('accounting.export')
+  const canPrint = usePermission('printing.print')
 
   const [key, setKey] = useState('revenue_daily')
   const [range, setRange] = useState<RangeKey>('last30')
   const [running, setRunning] = useState(false)
   const [report, setReport] = useState<ReportResult | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
 
   const catalog = useInvoke('reports.catalog', {})
 
@@ -93,6 +96,11 @@ export function ReportsScreen(): ReactNode {
             <Button variant="secondary" icon={<Play size={16} />} loading={running} onClick={() => void run()}>
               Refresh
             </Button>
+            {canPrint ? (
+              <Button variant="secondary" icon={<Printer size={16} />} disabled={!report} onClick={() => setPrintOpen(true)}>
+                Print / PDF
+              </Button>
+            ) : null}
             {canExport ? (
               <Button variant="primary" icon={<Download size={16} />} loading={exporting} disabled={!report} onClick={() => void exportCsv()}>
                 Export CSV
@@ -162,6 +170,18 @@ export function ReportsScreen(): ReactNode {
           </CardBody>
         </Card>
       )}
+
+      <PrintDialog
+        open={printOpen}
+        target={{
+          documentType: 'report',
+          reportKey: report?.key,
+          reportFrom: report?.from ?? undefined,
+          reportTo: report?.to ?? undefined,
+          label: report?.title
+        }}
+        onClose={() => setPrintOpen(false)}
+      />
     </div>
   )
 }
