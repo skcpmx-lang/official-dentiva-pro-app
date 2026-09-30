@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, BarChart3, Boxes, Calculator, CalendarClock, Cog, History, IdCard, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Printer, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
+import { ArrowRight, BarChart3, Boxes, Calculator, CalendarClock, Cog, DatabaseBackup, History, IdCard, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Printer, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
 import { useAppStore, usePermission } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
 import { invoke } from '../../lib/api'
@@ -98,6 +98,7 @@ export function CommandPalette(): ReactNode {
       { id: 'settings', label: 'Go to settings', icon: <Cog size={16} />, permission: 'settings.view', run: () => navigate('/settings') },
       { id: 'printing', label: 'Go to printing settings', icon: <Printer size={16} />, permission: 'printing.configure', run: () => navigate('/settings/printing') },
       { id: 'print-history', label: 'Open the print history', icon: <History size={16} />, permission: 'printing.print', run: () => navigate('/printing/history') },
+      { id: 'backup', label: 'Go to backup & restore', icon: <DatabaseBackup size={16} />, permission: 'backups.create', run: () => navigate('/settings/backup') },
       { id: 'audit', label: 'Go to the audit log', icon: <ScrollText size={16} />, permission: 'audit.view', run: () => navigate('/audit') },
       {
         id: 'lock',

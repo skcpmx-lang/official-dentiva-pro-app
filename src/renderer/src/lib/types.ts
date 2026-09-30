@@ -143,3 +143,13 @@ export type RenderedPrintDocument = ChannelOutput<'printing.render'>
 export type PrintOutcome = ChannelOutput<'printing.print'>
 export type PrintHistoryEntry = ChannelOutput<'printing.history'>['items'][number]
 export type PrintPaperClass = ChannelOutput<'printing.documents'>[number]['paperClasses'][number]
+
+/* -------------------------------------------------------------------- backup */
+
+export type BackupRecord = ChannelOutput<'backups.list'>['items'][number]
+export type BackupStatus = ChannelOutput<'backups.status'>
+export type BackupValidation = ChannelOutput<'backups.validate'>
+export type ScannedBackup = ChannelOutput<'backups.scan'>['items'][number]
+export type RestoreEntry = ChannelOutput<'backups.restores'>['items'][number]
+export type BackupKind = BackupRecord['kind']
+export type BackupSettingsInput = InputOf<'backups.saveSettings'>

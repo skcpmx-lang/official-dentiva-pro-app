@@ -2046,3 +2046,48 @@
   }
 }
 
+
+
+/* Backup & restore ------------------------------------------------------- */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.notice {
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.notice--danger {
+  border-left-color: var(--danger);
+  background: var(--surface-2);
+}
+
+.notice p {
+  margin: var(--sp-1) 0 0;
+}
+
+.notice ul {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.progress__bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
