@@ -46,7 +46,7 @@ export function RolesScreen(): ReactNode {
         }
       />
 
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         {(roles.data ?? []).map((role) => (
           <Card key={role.id}>
             <CardHeader
@@ -250,7 +250,7 @@ function RoleDialog({
         </div>
       ) : (
         <>
-          <div className="grid grid--two">
+          <div className="grid grid--2">
             <Field label="Role name" htmlFor="roleName" required error={form.errors.name}>
               <TextInput id="roleName" value={String(form.values.name ?? '')} onChange={(value) => form.setValue('name', value)} maxLength={80} />
             </Field>

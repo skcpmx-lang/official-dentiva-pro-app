@@ -232,8 +232,9 @@ export function Select({
       onChange={(event) => onChange(event.target.value)}
     >
       {placeholder ? <option value="">{placeholder}</option> : null}
-      {options.map((option) => (
-        <option key={option.value} value={option.value} disabled={option.disabled}>
+      {options.map((option, index) => (
+        /* Index-qualified key: call sites may legitimately repeat a value (group headings). */
+        <option key={`${index}-${option.value}`} value={option.value} disabled={option.disabled}>
           {option.label}
         </option>
       ))}

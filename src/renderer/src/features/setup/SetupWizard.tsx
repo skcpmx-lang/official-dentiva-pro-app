@@ -297,7 +297,7 @@ function ClinicStep({ onDone }: { onDone(): void }): ReactNode {
         subtitle="Printed on every prescription, invoice and report header. Bangla text is optional but recommended."
       />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Field label="Clinic name" htmlFor="clinicName" required error={form.errors.name}>
             <TextInput id="clinicName" value={String(form.values.name ?? '')} onChange={(value) => form.setValue('name', value)} maxLength={120} />
           </Field>
@@ -425,7 +425,7 @@ function DentistStep({ onDone }: { onDone(): void }): ReactNode {
         subtitle="At least one dentist is required — the name and degrees are printed on prescriptions."
       />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Field label="Full name" htmlFor="newDentistName" required>
             <TextInput id="newDentistName" value={draft.fullName} onChange={(value) => setDraft({ ...draft, fullName: value })} maxLength={120} />
           </Field>
@@ -548,7 +548,7 @@ function AdministratorStep({ onDone, onBack }: { onDone(): void, onBack(): void 
         subtitle="The administrator owns every permission, manages users and roles, and can perform backups and restores."
       />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Field label="Full name" htmlFor="adminFullName" required error={form.errors.fullName}>
             <TextInput id="adminFullName" value={String(form.values.fullName ?? '')} onChange={(value) => form.setValue('fullName', value)} maxLength={120} />
           </Field>
@@ -632,7 +632,7 @@ function PreferencesStep({ onDone, onBack }: { onDone(): void, onBack(): void })
     <Card>
       <CardHeader title="Working preferences" icon={<Wallet size={17} />} subtitle="Sensible defaults for a Bangladeshi clinic. Everything can be changed later in Settings." />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Field label="Currency" htmlFor="prefCurrency" hint="Dentiva Pro records money in Bangladeshi Taka only.">
             <TextInput id="prefCurrency" value={values['clinic.currency']} onChange={(value) => setValues({ ...values, 'clinic.currency': value })} maxLength={8} disabled />
           </Field>

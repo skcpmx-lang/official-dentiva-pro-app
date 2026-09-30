@@ -300,7 +300,7 @@ export function PatientProfileScreen(): ReactNode {
             ) : null}
           </div>
 
-          <div className="grid grid--two">
+          <div className="grid grid--2">
             <Card>
               <CardHeader title="Clinical background" icon={<Activity size={17} />} subtitle="Recorded by the clinic; printed on prescriptions where relevant." />
               <CardBody>
@@ -754,7 +754,7 @@ function ReferralDialog({
         </>
       }
     >
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Field label="Receiving doctor" htmlFor="externalDoctor" error={form.errors.externalDoctor}>
           <TextInput id="externalDoctor" value={String(form.values.externalDoctor ?? '')} onChange={(value) => form.setValue('externalDoctor', value || null)} maxLength={120} />
         </Field>

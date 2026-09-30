@@ -46,3 +46,29 @@ export type LoginResult = ChannelOutput<'auth.login'>
 
 /** Date-range presets accepted by the shared range schemas (mirrors `zRangePreset`). */
 export type RangePreset = NonNullable<AuditFilterInput['range']>['preset']
+
+/* ------------------------------------------------------------------ clinical */
+
+export type Treatment = ChannelOutput<'treatments.list'>[number]
+export type TreatmentInput = InputOf<'treatments.save'>
+export type VisitSummary = ChannelOutput<'visits.get'>
+export type VisitListItem = ChannelOutput<'visits.list'>['items'][number]
+export type VisitFilterInput = InputOf<'visits.list'>
+export type VisitInput = InputOf<'visits.save'>
+export type VisitTreatmentInput = InputOf<'visits.treatments.add'>
+export type VisitTreatment = VisitSummary['treatments'][number]
+export type VisitFinding = VisitSummary['findings'][number]
+export type VisitStatus = VisitSummary['status']
+
+export type ChartView = ChannelOutput<'chart.get'>
+export type ChartEntry = ChartView['entries'][number]
+export type ChartCondition = ChartView['conditions'][number]
+export type ChartEntryInput = InputOf<'chart.setEntry'>
+
+export type Prescription = ChannelOutput<'prescriptions.get'>
+export type PrescriptionListItem = ChannelOutput<'prescriptions.list'>['items'][number]
+export type PrescriptionInput = InputOf<'prescriptions.save'>
+export type Medicine = Prescription['medicines'][number]
+export type MedicineInput = InputOf<'prescriptions.templates.save'>['medicines'][number]
+export type PrescriptionTemplate = ChannelOutput<'prescriptions.templates.list'>[number]
+export type MedicineHistoryEntry = ChannelOutput<'prescriptions.medicines'>[number]

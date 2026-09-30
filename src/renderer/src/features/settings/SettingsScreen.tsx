@@ -123,7 +123,7 @@ function ClinicProfilePanel({ canModify }: { canModify: boolean }): ReactNode {
     <Card>
       <CardHeader title="Clinic identity" icon={<Building2 size={17} />} subtitle="Printed on every prescription, invoice, receipt and report." />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Field label="Clinic name" htmlFor="clinicName" required>
             <TextInput id="clinicName" value={draft.name} onChange={(value) => update({ name: value })} maxLength={120} disabled={!canModify} />
           </Field>
@@ -250,7 +250,7 @@ function SettingsGroupPanel({ tab, canModify }: { tab: TabId, canModify: boolean
         subtitle="Defaults applied to new records. Existing records keep the values they were saved with."
       />
       <CardBody>
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           {relevant.map((def) => (
             <SettingField
               key={def.key}

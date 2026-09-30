@@ -3,15 +3,18 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   ChevronsLeft,
   ChevronsRight,
+  CalendarClock,
   Cog,
   Info,
   LayoutDashboard,
   Lock,
   LogOut,
+  Pill,
   ScrollText,
   Search,
   ShieldCheck,
   Stethoscope,
+  Tags,
   UserCog,
   Users,
   UsersRound
@@ -55,7 +58,12 @@ const NAV_SECTIONS: NavSection[] = [
   },
   {
     title: 'Clinical',
-    entries: [{ to: '/settings/dentists', label: 'Dentists', icon: <Stethoscope size={18} />, permission: 'settings.view' }]
+    entries: [
+      { to: '/visits', label: 'Visits', icon: <CalendarClock size={18} />, permission: 'clinical.view' },
+      { to: '/prescriptions', label: 'Prescriptions', icon: <Pill size={18} />, permission: 'prescriptions.view' },
+      { to: '/treatments', label: 'Treatments', icon: <Tags size={18} />, permission: 'clinical.view' },
+      { to: '/settings/dentists', label: 'Dentists', icon: <Stethoscope size={18} />, permission: 'settings.view' }
+    ]
   },
   {
     title: 'Administration',

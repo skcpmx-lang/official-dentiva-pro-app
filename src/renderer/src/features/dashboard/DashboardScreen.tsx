@@ -112,7 +112,7 @@ export function DashboardScreen(): ReactNode {
         ))}
       </div>
 
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Card>
           <CardHeader
             title="Collections"
@@ -149,7 +149,7 @@ export function DashboardScreen(): ReactNode {
         </Card>
       </div>
 
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Card>
           <CardHeader title="Visits per dentist" subtitle="Workload in the selected period" />
           <CardBody>
@@ -200,7 +200,7 @@ export function DashboardScreen(): ReactNode {
       </div>
 
       {canSeeInventory ? (
-        <div className="grid grid--two">
+        <div className="grid grid--2">
           <Card>
             <CardHeader title="Low stock" subtitle="Items at or below their reorder level" icon={<PackageX size={17} />} />
             <CardBody flush>
@@ -240,7 +240,7 @@ export function DashboardScreen(): ReactNode {
         </div>
       ) : null}
 
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Card>
           <CardHeader title="Queue right now" subtitle="Patients waiting or in treatment" />
           <CardBody>

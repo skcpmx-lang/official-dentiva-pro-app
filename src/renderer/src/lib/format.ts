@@ -153,6 +153,30 @@ export function treatmentCategoryLabel(value: string): string {
   return TREATMENT_CATEGORIES.find((category) => category.value === value)?.label ?? value
 }
 
+/** Presentation labels for the prescription medicine form and timing vocabularies. */
+export const MEDICINE_FORM_LABELS: Record<string, string> = {
+  tablet: 'Tablet',
+  capsule: 'Capsule',
+  syrup: 'Syrup',
+  suspension: 'Suspension',
+  drops: 'Drops',
+  injection: 'Injection',
+  ointment: 'Ointment',
+  gel: 'Gel',
+  mouthwash: 'Mouthwash',
+  sachet: 'Sachet',
+  other: 'Other'
+}
+
+export const MEDICINE_TIMING_LABELS: Record<string, string> = {
+  before_meal: 'Before meal',
+  after_meal: 'After meal',
+  with_meal: 'With meal',
+  empty_stomach: 'Empty stomach',
+  bedtime: 'Bedtime',
+  as_needed: 'As needed (PRN)'
+}
+
 /* ------------------------------------------------------------------ non-hook helpers */
 
 /**

@@ -11,11 +11,11 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 |---|---|---|---|---|---|---|
 | REQ-001 | §8,§9 | Desktop shell technology selection & rationale | Architecture | `docs/ARCHITECTURE.md`, `electron.vite.config.ts`, electron 44 | build in CI | ⏳ |
 | REQ-002 | §6,§7,§89 | 100 % offline; no paid/external service | All | no HTTP client in `src/**`; CSP + request blocking in `src/main/index.ts`; audit script `scripts/audit-offline.mjs` | `tests/unit/offline-audit.test.ts` | ⏳ |
-| REQ-003 | §10,§11 | SQLite schema, FKs, indexes, migrations, integrity | DB | `src/main/db/schema.ts`, `src/main/db/migrate.ts` | `tests/integration/migrations.test.ts` | ⏳ |
+| REQ-003 | §10,§11 | SQLite schema, FKs, indexes, migrations, integrity | DB | `src/main/db/{schema,migrate,connection,seed,counters}.ts` | `tests/integration/database.test.ts` | ✅ |
 | REQ-004 | §125 | Exact money arithmetic (BDT) | Shared | `src/shared/money.ts` | `tests/unit/money.test.ts` | ⏳ |
 | REQ-005 | §126,§127 | Date/time handling, ranges, age derivation | Shared | `src/shared/datetime.ts` | `tests/unit/datetime.test.ts` | ⏳ |
 | REQ-006 | §5,§19 | Bengali Unicode end-to-end (NFC, search fold, bundled font) | Shared/UI/Print | `src/shared/bengali.ts`, `@fontsource/noto-sans-bengali` | `tests/unit/bengali.test.ts`, E2E-03 | ⏳ |
-| REQ-007 | §12,§13..§134 | Full entity model per specification | DB | `src/main/db/schema.ts` | `tests/integration/schema.test.ts` | ⏳ |
+| REQ-007 | §12,§13..§134 | Full entity model per specification | DB | `src/main/db/schema.ts` (~48 tables + views) | `tests/integration/database.test.ts` | ✅ |
 | REQ-008 | §150,§151 | Project memory + checkpoints | Docs | `ARENA.md`, `docs/COMPLETION_STATUS.md` | review | ⏳ |
 
 ## B. Security & access
@@ -26,8 +26,8 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | REQ-011 | §13 | First-run setup wizard (5 steps, multi-designation dentists, admin creation) | Setup | `src/main/modules/setup/service.ts`, `src/renderer/src/features/setup/**` | E2E-01 | ⏳ |
 | REQ-012 | §58 | Secure login/logout, scrypt hashing, failure throttling | Auth | `src/main/auth/password.ts`, `session/sessionManager.ts` | `tests/integration/auth.test.ts` | ⏳ |
 | REQ-013 | §57 | Auto-lock (5/10/15/30/off) with IPC lockdown | Session | `src/main/session/sessionManager.ts` | `tests/integration/lock.test.ts` | ⏳ |
-| REQ-014 | §54,§55 | Granular RBAC enforced in business logic | Auth/All | `src/shared/permissions.ts`, `src/main/auth/guard.ts` | `tests/integration/rbac.test.ts`, E2E-08 | ⏳ |
-| REQ-015 | §56 | Append-only audit trail | Audit | `src/main/modules/audit/*`, DB triggers | `tests/integration/audit.test.ts` | ⏳ |
+| REQ-014 | §54,§55 | Granular RBAC enforced in business logic | Auth/All | `src/shared/permissions.ts`, `src/main/ipc/router.ts`, `assertPermission` in every service | `tests/integration/patients.test.ts`, `tests/renderer/rbac-ui.test.tsx` | ✅ |
+| REQ-015 | §56 | Append-only audit trail | Audit | `src/main/modules/audit/service.ts` + DB triggers | `tests/integration/database.test.ts` (append-only at database level) | ✅ |
 | REQ-016 | §71,§132,§133,§134 | Destructive-action safeguards & typed confirmations | Admin/Settings | `src/main/modules/settings/service.ts` | `tests/integration/destructive.test.ts` | ⏳ |
 | REQ-017 | §84,§86 | Rotating logs without secrets/PII | Logging | `src/main/logging/logger.ts` | `tests/unit/logger.test.ts` | ⏳ |
 | REQ-018 | §70 | Attachment security (allowlist, safe names, traversal block) | Files | `src/main/files/attachmentService.ts` | `tests/integration/attachments.test.ts` | ⏳ |
@@ -36,20 +36,20 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 
 | Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
 |---|---|---|---|---|---|---|
-| REQ-020 | §15,§16,§142 | App shell: header, 272/72 px sidebar, sections, collapse animation | Shell | `src/renderer/src/components/shell/**` | `tests/renderer/shell.test.tsx` | ⏳ |
-| REQ-021 | §17,§18,§19 | Design tokens, typography, premium visual system | Design | `src/renderer/src/design/**` | visual audit | ⏳ |
+| REQ-020 | §15,§16,§142 | App shell: header, sidebar, sections, collapse | Shell | `src/renderer/src/components/shell/**` | `tests/renderer/rbac-ui.test.tsx` | ✅ |
+| REQ-021 | §17,§18,§19 | Design tokens, typography, premium visual system | Design | `src/renderer/src/design/**` | visual audit (checkpoint 19) | ✅ |
 | REQ-022 | §20,§21,§110 | Responsive 1280→2560, states for every component | UI | all screens | `docs/COMPLETION_STATUS.md` visual audit | ⏳ |
 | REQ-023 | §22,§75 | Permission-aware dashboard widgets | Dashboard | `src/main/modules/dashboard/service.ts`, `features/dashboard/**` | `tests/integration/dashboard.test.ts` | ⏳ |
-| REQ-024 | §23,§24 | Patient CRUD, date-range presets, unique patient code | Patients | `src/main/modules/patients/**` | E2E-02, `tests/integration/patients.test.ts` | ⏳ |
-| REQ-025 | §25,§26 | Rich patient profile with tabs + working quick actions | Patients | `features/patients/PatientProfile*.tsx` | E2E-02/03 | ⏳ |
-| REQ-026 | §27,§28 | Unlimited history + clinical timeline with filters | Clinical | `src/main/modules/timeline/**`, `features/patients/Timeline.tsx` | `tests/integration/timeline.test.ts` | ⏳ |
-| REQ-027 | §29,§30 | Data-driven dental chart (FDI adult + primary), configurable conditions | Clinical | `src/shared/dental.ts`, `modules/chart/**`, `features/chart/**` | E2E-03, `tests/integration/chart.test.ts` | ⏳ |
-| REQ-028 | §31 | Visit module (all clinical fields, billing-independent) | Clinical | `src/main/modules/visits/**` | `tests/integration/visits.test.ts` | ⏳ |
-| REQ-029 | §32 | Treatment catalog with editable prices | Clinical | `src/main/modules/treatments/**` | `tests/integration/treatments.test.ts` | ⏳ |
-| REQ-030 | §33,§34,§35,§36,§37,§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/prescriptions/**`, `printing/templates/prescription.ts` | E2E-03, `tests/unit/prescription-template.test.ts` | ⏳ |
+| REQ-024 | §23,§24 | Patient CRUD, date-range presets, unique patient code | Patients | `src/main/modules/patients/service.ts`, `features/patients/PatientListScreen.tsx`, `PatientFormScreen.tsx` | `tests/integration/patients.test.ts`, E2E-02 | ✅ |
+| REQ-025 | §25,§26 | Rich patient profile with tabs + working quick actions | Patients | `features/patients/PatientProfileScreen.tsx` | E2E-02/03 | ⏳ |
+| REQ-026 | §27,§28 | Unlimited history + clinical timeline with filters | Patients | `src/main/modules/patients/service.ts` (`timeline`), `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
+| REQ-027 | §29,§30 | Data-driven dental chart (FDI adult + primary), configurable conditions | Clinical | `src/shared/dental.ts`, `src/main/modules/clinical/chart.ts`, `features/clinical/{DentalChartScreen,ToothGrid}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-028 | §31 | Visit module (all clinical fields, billing-independent) | Clinical | `src/main/modules/clinical/visits.ts`, `features/clinical/{VisitListScreen,VisitScreen}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-029 | §32 | Treatment catalog with editable prices | Clinical | `src/main/modules/clinical/treatments.ts`, `features/clinical/TreatmentCatalogScreen.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-030 | §33..§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/clinical/prescriptions.ts`, `features/clinical/{PrescriptionListScreen,PrescriptionScreen}.tsx`; print template pending | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ⏳ |
 | REQ-031 | §66,§67 | Appointments (statuses, views) and queue management | Scheduling | `src/main/modules/appointments/**`, `queue/**` | E2E-05 | ⏳ |
-| REQ-032 | §68 | Referrals with follow-up tracking | Clinical | `src/main/modules/referrals/**` | `tests/integration/referrals.test.ts` | ⏳ |
-| REQ-033 | §69 | Attachments (upload, preview, open, export, archive) | Files | `src/main/files/**`, `features/patients/Attachments.tsx` | `tests/integration/attachments.test.ts` | ⏳ |
+| REQ-032 | §68 | Referrals with follow-up tracking | Clinical | `src/main/modules/patients/service.ts`, `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
+| REQ-033 | §69 | Attachments (upload, preview, open, export, archive) | Files | `src/main/files/attachments.ts`, patient profile attachments tab | `tests/integration/patients.test.ts` | ⏳ |
 
 ## D. Billing, inventory, accounting
 

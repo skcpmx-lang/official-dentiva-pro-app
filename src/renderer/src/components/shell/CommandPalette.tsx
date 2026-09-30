@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Cog, LayoutDashboard, Lock, LogOut, ScrollText, Search, UserCog, Users } from 'lucide-react'
+import { ArrowRight, CalendarClock, Cog, LayoutDashboard, Lock, LogOut, Pill, ScrollText, Search, Tags, UserCog, Users } from 'lucide-react'
 import { useAppStore, usePermission } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
 import { invoke } from '../../lib/api'
@@ -81,6 +81,10 @@ export function CommandPalette(): ReactNode {
         permission: 'patients.create',
         run: () => navigate('/patients/new')
       },
+      { id: 'visits', label: 'Go to visits', icon: <CalendarClock size={16} />, permission: 'clinical.view', run: () => navigate('/visits') },
+      { id: 'prescriptions', label: 'Go to prescriptions', icon: <Pill size={16} />, permission: 'prescriptions.view', run: () => navigate('/prescriptions') },
+      { id: 'new-prescription', label: 'Write a new prescription', hint: 'Prescriptions › New', icon: <Pill size={16} />, permission: 'prescriptions.create', run: () => navigate('/prescriptions/new') },
+      { id: 'treatments', label: 'Go to the treatment catalogue', icon: <Tags size={16} />, permission: 'clinical.view', run: () => navigate('/treatments') },
       { id: 'users', label: 'Go to users', icon: <UserCog size={16} />, permission: 'users.view', run: () => navigate('/settings/users') },
       { id: 'settings', label: 'Go to settings', icon: <Cog size={16} />, permission: 'settings.view', run: () => navigate('/settings') },
       { id: 'audit', label: 'Go to the audit log', icon: <ScrollText size={16} />, permission: 'audit.view', run: () => navigate('/audit') },

@@ -15,6 +15,12 @@ import { DashboardScreen } from './features/dashboard/DashboardScreen'
 import { PatientListScreen } from './features/patients/PatientListScreen'
 import { PatientFormScreen } from './features/patients/PatientFormScreen'
 import { PatientProfileScreen } from './features/patients/PatientProfileScreen'
+import { VisitListScreen } from './features/clinical/VisitListScreen'
+import { VisitScreen } from './features/clinical/VisitScreen'
+import { DentalChartScreen } from './features/clinical/DentalChartScreen'
+import { TreatmentCatalogScreen } from './features/clinical/TreatmentCatalogScreen'
+import { PrescriptionListScreen } from './features/clinical/PrescriptionListScreen'
+import { PrescriptionScreen } from './features/clinical/PrescriptionScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { DentistsScreen } from './features/settings/DentistsScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
@@ -56,6 +62,13 @@ export function App(): ReactNode {
                 { path: 'patients/new', element: <PermissionRoute permission="patients.create"><PatientFormScreen mode="create" /></PermissionRoute> },
                 { path: 'patients/:patientId', element: <PermissionRoute permission="patients.view"><PatientProfileScreen /></PermissionRoute> },
                 { path: 'patients/:patientId/edit', element: <PermissionRoute permission="patients.edit"><PatientFormScreen mode="edit" /></PermissionRoute> },
+                { path: 'visits', element: <PermissionRoute permission="clinical.view"><VisitListScreen /></PermissionRoute> },
+                { path: 'visits/:visitId', element: <PermissionRoute permission="clinical.view"><VisitScreen /></PermissionRoute> },
+                { path: 'chart/:patientId', element: <PermissionRoute permission="clinical.view"><DentalChartScreen /></PermissionRoute> },
+                { path: 'treatments', element: <PermissionRoute permission="clinical.view"><TreatmentCatalogScreen /></PermissionRoute> },
+                { path: 'prescriptions', element: <PermissionRoute permission="prescriptions.view"><PrescriptionListScreen /></PermissionRoute> },
+                { path: 'prescriptions/new', element: <PermissionRoute permission="prescriptions.create"><PrescriptionScreen /></PermissionRoute> },
+                { path: 'prescriptions/:prescriptionId', element: <PermissionRoute permission="prescriptions.view"><PrescriptionScreen /></PermissionRoute> },
                 { path: 'settings', element: <PermissionRoute permission="settings.view"><SettingsScreen /></PermissionRoute> },
                 { path: 'settings/dentists', element: <PermissionRoute permission="settings.view"><DentistsScreen /></PermissionRoute> },
                 { path: 'settings/users', element: <PermissionRoute permission="users.view"><UsersScreen /></PermissionRoute> },

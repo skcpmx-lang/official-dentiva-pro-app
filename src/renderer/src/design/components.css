@@ -1576,3 +1576,429 @@
     padding: var(--sp-4);
   }
 }
+
+/* --------------------------------------------------------------------------- */
+/* Layout helpers and detail views                                             */
+/* --------------------------------------------------------------------------- */
+
+.center-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8);
+  overflow: auto;
+}
+
+.center-screen--wide {
+  align-items: stretch;
+  justify-content: flex-start;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.link {
+  color: var(--brand-600);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.link-strong {
+  font-weight: 600;
+  color: var(--slate-900);
+}
+
+.stack--tight {
+  gap: var(--sp-1);
+}
+
+/* Definition lists used by detail panels, the about screen and audit records. */
+.detail-list {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+}
+
+.detail-list > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) 1fr;
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-list > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.detail-list dt {
+  color: var(--text-subtle);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.detail-list dd {
+  margin: 0;
+  color: var(--slate-800);
+}
+
+/* Simple bordered list for the setup wizard and read-only summaries. */
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.plain-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+}
+
+.plain-list__item + .plain-list__item {
+  border-top: 1px solid var(--border);
+}
+
+.disk-list {
+  margin: 0;
+  padding-left: var(--sp-5);
+  display: grid;
+  gap: var(--sp-2);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.code-block {
+  margin: 0;
+  padding: var(--sp-3);
+  background: var(--slate-50);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--slate-800);
+  overflow: auto;
+  max-height: 420px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow: auto;
+  max-height: 520px;
+}
+
+.table--compact th,
+.table--compact td {
+  padding: 6px var(--sp-3);
+  font-size: 12.5px;
+}
+
+/* Chips that behave as buttons (filters, tag editors, condition palettes). */
+.chip--static {
+  background: var(--slate-50);
+}
+
+.chip--removable {
+  cursor: pointer;
+  background: var(--brand-100);
+  border-color: var(--brand-200, var(--slate-200));
+  color: var(--brand-700, var(--brand-600));
+}
+
+.chip--active {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+  color: var(--text-inverse);
+}
+
+.chip--active:hover {
+  background: var(--brand-500);
+}
+
+/* --------------------------------------------------------------------------- */
+/* Setup wizard                                                                */
+/* --------------------------------------------------------------------------- */
+
+.wizard {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .wizard {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wizard__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+  position: sticky;
+  top: var(--sp-4);
+}
+
+.wizard__step-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  text-align: left;
+}
+
+.wizard__step-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.wizard__step.is-active .wizard__step-button {
+  border-color: var(--brand-500);
+  box-shadow: var(--el-1);
+}
+
+.wizard__step.is-done .wizard__step-icon {
+  background: var(--success-soft);
+  color: #15803d;
+}
+
+.wizard__step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-full);
+  background: var(--slate-100);
+  color: var(--slate-600);
+  flex: 0 0 auto;
+}
+
+.wizard__body {
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------------- */
+/* Permission matrix (roles screen)                                            */
+/* --------------------------------------------------------------------------- */
+
+.permission-group {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.permission-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--border);
+  text-transform: capitalize;
+}
+
+.permission-group__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-4);
+}
+
+.permission-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------- */
+/* Clinical screens                                                            */
+/* --------------------------------------------------------------------------- */
+
+.rx-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-4);
+  align-items: start;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.rx-head__clinic {
+  font-weight: 600;
+}
+
+.rx-head__meta {
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.medicine-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/** Column headers for the medicine table; the columns mirror `.medicine-row__main`. */
+.medicine-grid__head {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) repeat(3, 62px) minmax(0, 1.1fr) 72px;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-subtle);
+}
+
+.medicine-row {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.medicine-row__main {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) repeat(3, 62px) minmax(0, 1.1fr) 72px;
+  gap: var(--sp-2);
+  align-items: start;
+}
+
+.medicine-row__side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.medicine-row__note {
+  grid-column: 1 / -1;
+}
+
+.medicine-row .field__input {
+  height: var(--control-h-sm, 32px);
+  font-size: 13px;
+}
+
+@media (max-width: 1180px) {
+  .medicine-grid__head {
+    display: none;
+  }
+
+  .medicine-row__main {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 62px) minmax(0, 1fr) 72px;
+  }
+}
+
+.dose-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.chart-panel {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .chart-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--chart-healthy);
+  display: inline-block;
+}
+
+.tooth__meta {
+  font-size: 10px;
+  color: var(--text-subtle);
+  text-align: center;
+  line-height: 12px;
+  min-height: 12px;
+}
+
+.visit-section {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--slate-50);
+}
+
+.summary-strip__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.summary-strip__label {
+  color: var(--text-subtle);
+  font-size: 12px;
+}
+
+.rx-sheet {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--sp-6);
+  display: grid;
+  gap: var(--sp-4);
+  max-width: 820px;
+}

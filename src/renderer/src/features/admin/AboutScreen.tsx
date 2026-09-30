@@ -93,7 +93,7 @@ export function AboutScreen(): ReactNode {
         }
       />
 
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Card>
           <CardHeader title="Build" icon={<Info size={17} />} subtitle="Recorded in every backup manifest and printed document footer." />
           <CardBody>

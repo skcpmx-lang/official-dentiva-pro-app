@@ -50,13 +50,11 @@ const CATEGORY_PREFIX: Record<string, string> = {
   preventive: 'PREV',
   restorative: 'REST',
   endodontic: 'ENDO',
-  periodontal: 'PERIO',
-  prosthodontic: 'PROS',
+  surgical: 'SURG',
+  prosthetic: 'PROS',
   orthodontic: 'ORTH',
-  oral_surgery: 'SURG',
-  pediatric: 'PEDO',
   cosmetic: 'COSM',
-  other: 'MISC'
+  general: 'GEN'
 }
 
 function mapTreatment(row: TreatmentRow, usageCount: number): TreatmentRecord {

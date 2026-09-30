@@ -6,18 +6,17 @@ import { zActionResult } from './system'
 /* Value objects                                                              */
 /* -------------------------------------------------------------------------- */
 
+/** Shared with the seeded catalogue and the renderer's category labels. */
 export const TREATMENT_CATEGORIES = [
   'diagnostic',
   'preventive',
   'restorative',
   'endodontic',
-  'periodontal',
-  'prosthodontic',
+  'surgical',
+  'prosthetic',
   'orthodontic',
-  'oral_surgery',
-  'pediatric',
   'cosmetic',
-  'other'
+  'general'
 ] as const
 
 export const VISIT_STATUSES = ['draft', 'final', 'cancelled'] as const

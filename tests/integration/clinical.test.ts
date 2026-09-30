@@ -224,7 +224,7 @@ describe('treatment catalogue', () => {
     saveTreatment(ctx, treatmentInput({ name: 'Root canal treatment', category: 'endodontic', defaultPriceMicro: 500_000 }))
     expect(() => saveTreatment(ctx, treatmentInput({ name: 'root canal treatment', category: 'endodontic' }))).toThrow(/already exists/i)
 
-    const created = saveTreatment(ctx, treatmentInput({ name: 'Surgical extraction (test item)', category: 'oral_surgery', defaultPriceMicro: 100_000 }))
+    const created = saveTreatment(ctx, treatmentInput({ name: 'Surgical extraction (test item)', category: 'surgical', defaultPriceMicro: 100_000 }))
     archiveTreatment(ctx, { id: created.id, reason: 'No longer offered' })
     // Archiving removes it from the active catalogue; the row itself stays for historical prices.
     expect(listTreatments(ctx, { search: 'Surgical extraction (test item)' })).toHaveLength(0)

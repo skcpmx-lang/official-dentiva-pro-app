@@ -239,7 +239,7 @@ function DentistDialog({
         </>
       }
     >
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Field label="Full name" htmlFor="dentistName" required error={form.errors.fullName}>
           <TextInput id="dentistName" value={String(form.values.fullName ?? '')} onChange={(value) => form.setValue('fullName', value)} maxLength={120} />
         </Field>

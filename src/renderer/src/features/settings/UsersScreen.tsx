@@ -261,7 +261,7 @@ function UserDialog({
         </>
       }
     >
-      <div className="grid grid--two">
+      <div className="grid grid--2">
         <Field label="Full name" htmlFor="userFullName" required error={form.errors.fullName}>
           <TextInput id="userFullName" value={String(form.values.fullName ?? '')} onChange={(value) => form.setValue('fullName', value)} maxLength={120} />
         </Field>
