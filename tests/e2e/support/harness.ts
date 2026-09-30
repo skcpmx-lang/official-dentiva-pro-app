@@ -233,6 +233,10 @@ export async function prepareClinic(page: Page, options: { throughUi?: boolean }
     await invoke(page, 'setup.preferences', preferencesStepPayload())
     /* Setup is confirmed with the clinic name, exactly as the wizard's dialog requires. */
     await invoke(page, 'setup.complete', setupCompletePayload())
+    // The wizard was driven over IPC, so the window still sits on its own route: reloading there would
+    // render the wizard again, and the setup screen only hands over to `/login` when the operator
+    // presses its own button. Take the window to sign-in explicitly instead.
+    await openRoute(page, '/login')
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
   }
