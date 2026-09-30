@@ -24,7 +24,7 @@ jobs:
 
     env:
       DENTIVA_DATA_DIR: ${{ github.workspace }}\.e2e-data
-      DENTIVA_TEST_ACTIVATION_CODE: '0000000000000000'
+      DENTIVA_ACTIVATION_CODE: '0000-0000-0000-0001'
 
     steps:
       - name: Check out the repository

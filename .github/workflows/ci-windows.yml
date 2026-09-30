@@ -24,10 +24,12 @@ jobs:
     timeout-minutes: 90
 
     env:
-      # End-to-end runs use a scratch data directory and never touch a real clinic database.
-      DENTIVA_DATA_DIR: ${{ github.workspace }}\.e2e-data
-      DENTIVA_TEST_ACTIVATION_CODE: '0000000000000000'
+      # The activation code the end-to-end workflow types. It is not the product's code: the verifier
+      # accepts DENTIVA_ACTIVATION_CODE only while host.isDevelopment() is true, which is
+      # `!app.isPackaged`, so a packaged installer ignores this variable entirely.
+      DENTIVA_ACTIVATION_CODE: '0000-0000-0000-0001'
       ELECTRON_ENABLE_LOGGING: '1'
+      # Each workflow creates its own scratch data directory, so no run can see another run's database.
 
     steps:
       - name: Check out the repository

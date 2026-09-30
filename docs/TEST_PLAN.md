@@ -7,23 +7,39 @@
 | Unit | Vitest (node) | money math, date ranges, permission evaluation, identifiers, validation schemas, activation verifier, backup manifest checksums, inventory math, reorder/expiry logic, Bengali folding | `tests/unit/**` |
 | Integration | Vitest (node, real SQLite in temp dir) | repositories + services against a real database: patients, visits, chart, prescriptions, invoices/payments, inventory ledger, accounting, RBAC enforcement, audit, backup/restore round-trip, migrations | `tests/integration/**` |
 | Renderer | Vitest + jsdom + Testing Library | primitives, formatters, guards, key screens' logic (validation, permission gating, empty/error states) | `tests/renderer/**` |
-| E2E | Playwright `_electron` | real packaged-app workflows against a temp data dir (`DENTIVA_DATA_DIR`) | `tests/e2e/**` |
+| E2E | Playwright `_electron` | the ten workflows below, run against the built application (`npm run build` first — `npm run test:e2e` checks and says so) with a scratch data directory per workflow | `tests/e2e/**` |
 | Stress | Node script | synthetic 10k patients / 100k visits / 100k appointments / 100k invoices / 100k payments / 5k inventory rows; measures startup, list, search, dashboard, report latency | `scripts/stress-seed.ts` |
 
 All layers run in CI; Windows runners run integration + E2E + installer validation.
 
 ## 2. Mandatory E2E workflows (§107)
 
-1. Fresh install → activation → setup → login → dashboard.
-2. Create patient → search → profile → restart app → patient persists.
-3. Patient → visit → dental chart → treatment → prescription → preview → PDF.
-4. Patient → invoice → partial payment → due → second payment → fully paid.
-5. Appointment → arrival → queue → consultation → completed.
-6. Inventory → purchase → stock in → adjustment → low-stock notification.
-7. Accounting → income → expense → report.
-8. User + role with restricted financial permission → access denial (IPC and route).
-9. Backup → modify data → restore → original state verified.
-10. Reinstall/uninstall behaviour (documented; installer-level on Windows CI).
+Each workflow is one file under `tests/e2e/`, runs on the Windows runner in `ci-windows.yml`, and is
+also runnable locally with `npm run build && npm run test:e2e`.
+
+| # | Workflow | File |
+|---|---|---|
+| 1 | Fresh install → activation → setup → login → dashboard | `01-fresh-install.spec.ts` |
+| 2 | Create patient → search → profile → restart app → patient persists | `02-patient-persistence.spec.ts` |
+| 3 | Patient → visit → dental chart → treatment → prescription → preview → PDF | `03-clinical-documents.spec.ts` |
+| 4 | Patient → invoice → partial payment → due → second payment → fully paid | `04-billing-payments.spec.ts` |
+| 5 | Appointment → arrival → queue → consultation → completed | `05-queue-workflow.spec.ts` |
+| 6 | Inventory → purchase → stock in → adjustment → low-stock notification | `06-inventory-flow.spec.ts` |
+| 7 | Accounting → income → expense → report | `07-accounting-reports.spec.ts` |
+| 8 | Restricted financial permission → denial in the route **and** on the channel | `08-permissions.spec.ts` |
+| 9 | Backup → modify data → restore → original state verified | `09-backup-restore.spec.ts` |
+| 10 | Install/uninstall behaviour: data directory, restart, packaged identity | `10-install-uninstall.spec.ts` |
+
+Workflow 10 proves everything the uninstall rules depend on from inside the application (the data
+directory is self-contained and survives a restart, activation and setup are not repeated). The
+installer's own pages — licence, folder, shortcuts, the two uninstall answers — are Windows-only and
+are recorded by hand in `docs/CLEAN_MACHINE_TEST.md`.
+
+**Activation in E2E.** The workflows type `DENTIVA_ACTIVATION_CODE` (`0000-0000-0000-0001`), which is
+not the product's code: `src/main/activation/service.ts` accepts that variable only while
+`host.isDevelopment()` is true (`!app.isPackaged`), so the packaged installer ignores it. The rest of
+the activation path — the screen, throttling, the `license_state` row and the bootstrap transition — is
+the production one, and a wrong code is still refused.
 
 ## 3. Negative testing (§108)
 
