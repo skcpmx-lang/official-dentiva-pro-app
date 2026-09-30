@@ -111,24 +111,12 @@ export function usePermission(code: string | string[]): boolean {
   })
 }
 
-export function useAnyPermission(codes: string[]): boolean {
-  return useAppStore((state) => {
-    const session = state.session
-    if (!session) return false
-    return codes.some((entry) => session.permissions.includes(entry))
-  })
-}
-
 export function useSession(): SessionSummary | null {
   return useAppStore((state) => state.session)
 }
 
 export function useSetting(key: string, fallback = ''): string {
   return useAppStore((state) => state.settings[key] ?? fallback)
-}
-
-export function useSettings(): Record<string, string> {
-  return useAppStore((state) => state.settings)
 }
 
 export function useClinic(): ClinicProfile | null {

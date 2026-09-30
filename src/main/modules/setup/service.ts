@@ -1,6 +1,6 @@
 import type { ServiceContext } from '../../context'
 import { AppError, stateError, validationError } from '@shared/errors'
-import { getClinicProfile, updateClinicProfile, getNumberSetting, getBooleanSetting, updateSettings, getAllSettings, type ClinicProfileInput } from '../settings/service'
+import {getClinicProfile, updateClinicProfile, getNumberSetting, updateSettings, getAllSettings, type ClinicProfileInput } from '../settings/service'
 import { listDentists, saveDentist, type DentistInput, type DentistRecord } from '../dentists/service'
 import { hashPassword, validatePasswordStrength, DEFAULT_POLICY } from '../../auth/password'
 import { expandRolePermissions } from '@shared/permissions'
@@ -207,9 +207,3 @@ export function autoLockMinutes(ctx: ServiceContext): number {
   return Number.isFinite(minutes) ? minutes : 10
 }
 
-export function smokeSetupDefaults(ctx: ServiceContext): { appointmentDuration: number, appointmentReminderEnabled: boolean } {
-  return {
-    appointmentDuration: getNumberSetting(ctx, 'practice.appointmentDuration'),
-    appointmentReminderEnabled: getBooleanSetting(ctx, 'notifications.missedAppointmentAlerts')
-  }
-}

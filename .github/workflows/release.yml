@@ -1,0 +1,100 @@
+name: Release
+
+# Produces the shippable Windows build. The installer that customers receive is the one this job
+# creates and checksums; a local `npm run dist:win` exists for iteration and never substitutes for it
+# (see docs/RELEASE_PLAN.md §2).
+#
+# Triggered by a version tag (`v1.0.0`) or by hand. The job verifies everything again — a tag alone is
+# not evidence that the code passes — then attaches the installer, its SHA-256, the release notes, the
+# third-party notices and the build identity to a GitHub Release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Windows release build
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    env:
+      DENTIVA_DATA_DIR: ${{ github.workspace }}\.e2e-data
+      DENTIVA_TEST_ACTIVATION_CODE: '0000000000000000'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Full verification (types, lint, tests, audits)
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run audit:placeholders
+          npm run audit:offline
+          npm run audit:deps
+          npm run audit:deadcode
+
+      - name: Build the application bundle
+        run: npm run build
+
+      - name: Build the build identity file
+        run: npm run build:info
+
+      - name: Rebuild the native module for Electron
+        run: npm run rebuild:electron
+
+      - name: End-to-end workflows
+        run: npm run test:e2e
+
+      - name: Build the NSIS installer
+        run: npm run dist:win
+
+      - name: Assemble the unpacked portable copy
+        shell: pwsh
+        run: |
+          npm run dist:dir
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          Compress-Archive -Path 'release\win-unpacked\*' -DestinationPath "release\DentivaPro-$version-portable.zip" -Force
+
+      - name: Checksums
+        run: npm run release:checksums
+
+      - name: Collect the release notes and notices
+        shell: pwsh
+        run: |
+          Copy-Item THIRD_PARTY_NOTICES.md release\THIRD_PARTY_NOTICES.md
+          Copy-Item build-info.json release\build-info.json
+          if (Test-Path RELEASE_NOTES.md) { Copy-Item RELEASE_NOTES.md release\RELEASE_NOTES.md }
+          Get-ChildItem release | Format-Table Name, Length
+
+      - name: Create the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Dentiva Pro ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: false
+          body_path: RELEASE_NOTES.md
+          files: |
+            release/*.exe
+            release/*.zip
+            release/SHA256SUMS.txt
+            release/THIRD_PARTY_NOTICES.md
+            release/build-info.json
+            release/RELEASE_NOTES.md

@@ -1,6 +1,6 @@
 import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
-import { AppError, notFoundError, validationError } from '@shared/errors'
+import {AppError, notFoundError } from '@shared/errors'
 import { z } from 'zod'
 import type { zDentistInput } from '@shared/contracts'
 import { normalizeBengali } from '@shared/bengali'
@@ -85,10 +85,6 @@ export function getDentist(ctx: ServiceContext, id: number): DentistRecord {
   const dentist = loadDentist(ctx, id)
   if (!dentist) throw notFoundError('dentist', id)
   return dentist
-}
-
-export function getDentistSafe(ctx: ServiceContext, id: number): DentistRecord | null {
-  return loadDentist(ctx, id)
 }
 
 /**
@@ -244,8 +240,3 @@ export function dentistsOnDuty(ctx: ServiceContext, weekday: number): DentistRec
   )
 }
 
-export function validateDentistForVisit(ctx: ServiceContext, dentistId: number): DentistRecord {
-  const dentist = getDentist(ctx, dentistId)
-  if (!dentist.isActive) throw validationError('The selected dentist is no longer active. Choose another dentist.')
-  return dentist
-}

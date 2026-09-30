@@ -428,10 +428,3 @@ export function dateInputToInstant(date: string | null, time = '00:00'): number 
   return base + (hours ?? 0) * 3_600_000 + (minutes ?? 0) * 60_000
 }
 
-export function FormGrid({ children, columns = 2 }: { children: ReactNode, columns?: 1 | 2 | 3 }): ReactNode {
-  return (
-    <div className="grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: 'var(--sp-4)' }}>
-      {children}
-    </div>
-  )
-}

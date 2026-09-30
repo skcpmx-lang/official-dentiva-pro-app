@@ -77,22 +77,6 @@ export function ioError(message: string, detail?: Record<string, unknown>): AppE
   return new AppError('E_IO', message, detail ? { detail } : {})
 }
 
-export function printError(message: string, detail?: Record<string, unknown>): AppError {
-  return new AppError('E_PRINT', message, detail ? { detail } : {})
-}
-
-export function licenseError(message: string): AppError {
-  return new AppError('E_LICENSE', message)
-}
-
-export function lockedError(): AppError {
-  return new AppError('E_LOCKED', 'The application is locked. Enter your password to continue.')
-}
-
-export function unauthenticatedError(): AppError {
-  return new AppError('E_UNAUTHENTICATED', 'Your session has ended. Please sign in again.')
-}
-
 /** Convert any thrown value into the serializable envelope, hiding internals from ordinary users. */
 export function toSerializedError(error: unknown): SerializedAppError {
   if (error instanceof AppError) return error.toSerialized()

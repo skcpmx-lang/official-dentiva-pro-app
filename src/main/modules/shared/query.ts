@@ -96,7 +96,3 @@ export function clampPage(page: PageRequest | undefined, defaultLimit = 50, maxL
   return { limit, offset }
 }
 
-/** `IN (?,?,?)` helper for small, code-controlled lists (never used with user text). */
-export function inClause(values: readonly string[]): string {
-  return values.map(() => '?').join(',')
-}

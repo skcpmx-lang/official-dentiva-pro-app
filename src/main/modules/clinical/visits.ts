@@ -95,10 +95,6 @@ interface VisitRow {
   updated_at: number
 }
 
-export function visitRangeClause(range: ResolvedRange): { sql: string, params: Record<string, number> } {
-  return { sql: 'visit_at >= @rangeFrom AND visit_at <= @rangeTo', params: { rangeFrom: range.from, rangeTo: range.to } }
-}
-
 function patientHeader(ctx: ServiceContext, patientId: number): {
   code: string
   name: string
@@ -655,15 +651,3 @@ export function setVisitFindings(
   return getVisitSummary(ctx, input.visitId)
 }
 
-export function openVisitsToday(ctx: ServiceContext): number {
-  const range = resolveRange('today', ctx.now())
-  const row = ctx.db
-    .prepare("SELECT COUNT(*) AS count FROM visits WHERE is_deleted = 0 AND status = 'draft' AND visit_at BETWEEN ? AND ?")
-    .get(range.from, range.to) as { count: number }
-  return row.count
-}
-
-export function countVisits(ctx: ServiceContext): number {
-  const row = ctx.db.prepare('SELECT COUNT(*) AS count FROM visits WHERE is_deleted = 0').get() as { count: number }
-  return row.count
-}

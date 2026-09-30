@@ -1,0 +1,68 @@
+# Dentiva Pro — Windows packaging.
+#
+# The installer is produced only by the release pipeline (see docs/RELEASE_PLAN.md); `npm run dist:win`
+# runs the very same configuration locally for iteration. The application is fully offline: nothing in
+# this file fetches anything at run time, and `npmRebuild` exists because better-sqlite3 is a native
+# module that has to match the Electron ABI it ships with.
+
+appId: bd.dentivapro.app
+productName: Dentiva Pro
+copyright: © 2026 Shohan Khan. All rights reserved.
+
+directories:
+  output: release
+  buildResources: build
+
+# Only the built bundles and the documents a customer is entitled to see are packaged. Sources, tests
+# and developer tooling stay out of the installer.
+files:
+  - out/**/*
+  - package.json
+  - LICENSE.txt
+  - THIRD_PARTY_NOTICES.md
+  - '!**/*.map'
+  - '!**/node_modules/**/{test,tests,__tests__,example,examples,doc,docs}/**'
+
+# Identifies the exact commit and toolchain the installed copy came from (About → Build).
+extraResources:
+  - from: build-info.json
+    to: build-info.json
+
+asar: true
+asarUnpack:
+  - '**/*.node'
+
+# better-sqlite3 is compiled for the Electron ABI during packaging, never for the CI Node runtime.
+npmRebuild: true
+buildDependenciesFromSource: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: DentivaPro
+  artifactName: DentivaPro-Setup-${version}.exe
+  legalTrademarks: Dentiva Pro
+  # Unsigned build: Windows SmartScreen will warn on first run until the owner supplies a code-signing
+  # certificate. This is recorded in docs/KNOWN_LIMITATIONS.md rather than hidden.
+  signAndEditExecutable: true
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Dentiva Pro
+  uninstallDisplayName: Dentiva Pro ${version}
+  license: LICENSE.txt
+  runAfterFinish: true
+  # Clinic data lives in %APPDATA%\Dentiva Pro and survives an uninstall unless the operator says
+  # otherwise on the uninstall page (see build/installer.nsh).
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+
+publish: null

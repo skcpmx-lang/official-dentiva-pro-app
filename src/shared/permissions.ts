@@ -133,14 +133,6 @@ export function isKnownPermission(code: string): boolean {
   return PERMISSION_SET.has(code)
 }
 
-export function permissionsByModule(): Record<PermissionModule, PermissionDef[]> {
-  const grouped = {} as Record<PermissionModule, PermissionDef[]>
-  for (const permission of PERMISSIONS) {
-    ;(grouped[permission.module] ??= []).push(permission)
-  }
-  return grouped
-}
-
 export interface RoleDefinition {
   code: string
   name: string
@@ -290,14 +282,6 @@ export interface Actor {
 
 export function can(actor: Pick<Actor, 'permissions'>, code: string): boolean {
   return actor.permissions.has(code)
-}
-
-export function canAll(actor: Pick<Actor, 'permissions'>, codes: readonly string[]): boolean {
-  return codes.every((code) => actor.permissions.has(code))
-}
-
-export function canAny(actor: Pick<Actor, 'permissions'>, codes: readonly string[]): boolean {
-  return codes.some((code) => actor.permissions.has(code))
 }
 
 /** Maximum discount basis points an actor may apply. `null` when the actor may apply any discount. */

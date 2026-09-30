@@ -46,10 +46,3 @@ export function deriveActor(db: Db, userId: number): Actor {
   }
 }
 
-export function actorHasAnyPermission(actor: Actor, codes: readonly string[]): boolean {
-  return codes.some((code) => actor.permissions.has(code))
-}
-
-export function actorIsFinancial(actor: Actor): boolean {
-  return actorHasAnyPermission(actor, ['billing.view', 'payments.view', 'accounting.view'])
-}

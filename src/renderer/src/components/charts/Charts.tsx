@@ -185,22 +185,6 @@ export function DonutChart({
   )
 }
 
-export function Sparkline({ points, width = 120, height = 32 }: { points: number[], width?: number, height?: number }): ReactNode {
-  if (points.length === 0) return null
-  const max = Math.max(...points, 1)
-  const min = Math.min(...points, 0)
-  const range = max - min || 1
-  const step = points.length > 1 ? width / (points.length - 1) : 0
-  const line = points
-    .map((value, index) => `${index === 0 ? 'M' : 'L'}${(index * step).toFixed(1)},${(height - ((value - min) / range) * height).toFixed(1)}`)
-    .join(' ')
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={line} fill="none" stroke="var(--brand-500)" strokeWidth={1.8} />
-    </svg>
-  )
-}
-
 function EmptyChart({ height, message }: { height: number, message: string }): ReactNode {
   return (
     <div className="chart chart--empty" style={{ height }} role="status">

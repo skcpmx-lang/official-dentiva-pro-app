@@ -79,7 +79,3 @@ export function missingBundledFonts(): string[] {
   return [...cachedMissing]
 }
 
-export function resetFontCache(): void {
-  cachedCss = null
-  cachedMissing = []
-}

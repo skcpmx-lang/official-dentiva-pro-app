@@ -143,10 +143,6 @@ export function login(deps: LoginDependencies, username: string, password: strin
   return { actor, mustChangePassword: record.must_change_password === 1 || passwordExpired, passwordExpired }
 }
 
-export interface PasswordPolicyInput {
-  minPasswordLength: number
-}
-
 export function changeOwnPassword(
   deps: LoginDependencies,
   actor: Actor,
@@ -177,20 +173,6 @@ export function changeOwnPassword(
     actor.userId
   )
   audit.write({ module: 'auth', action: 'password.change', entityType: 'user', entityId: actor.userId, summary: `${actor.username} changed their password` })
-}
-
-export function listLoginAttempts(db: Db, limit = 100): Array<{ id: number, username: string, at: number, success: number, reason: string | null }> {
-  return db
-    .prepare('SELECT id, username, at, success, reason FROM login_attempts ORDER BY at DESC LIMIT ?')
-    .all(limit) as Array<{ id: number, username: string, at: number, success: number, reason: string | null }>
-}
-
-/** Used by the setup wizard and by user administration to enforce the clinic password policy. */
-export function validateNewPassword(password: string, minLength: number): void {
-  const problems = validatePasswordStrength(password, { ...DEFAULT_POLICY, minLength })
-  if (problems.length > 0) {
-    throw new AppError('E_VALIDATION', 'The password does not meet the clinic security policy.', { fieldErrors: { password: problems.join(' ') } })
-  }
 }
 
 export function rolePermissionCodes(db: Db, roleId: number): string[] {

@@ -1,6 +1,6 @@
 # Dentiva Pro — Completion Status
 
-> Living document. Updated at every checkpoint. Last update: checkpoint 17 closed — notifications, global search, per-user preferences, recovery mode.
+> Living document. Updated at every checkpoint. Last update: repository infrastructure landed — CI workflows, packaging, audits, release scripts — and the dead-code clean-up removed the 164 declarations the audit found.
 > Checkpoints are marked ✅ only when their acceptance criteria in
 > `docs/ACCEPTANCE_CRITERIA.md` pass.
 
@@ -30,8 +30,8 @@
 | 19 | UI/UX visual audit | ⏳ | |
 | 20 | Performance/stress testing | ⏳ | |
 | 21 | Full regression | ⏳ | |
-| 22 | Installer/clean-machine testing | ⏳ | Windows CI + manual record |
-| 23 | CI/CD release build | ⏳ | |
+| 22 | Installer/clean-machine testing | ⏳ | `electron-builder.yml` + `build/installer.nsh` (uninstall keeps the data directory unless the operator answers Yes; silent uninstall never deletes it) and `docs/CLEAN_MACHINE_TEST.md` are written; the installer must be produced and installed by a Windows runner and the clean-machine pass recorded by hand |
+| 23 | CI/CD release build | ⏳ | `.github/workflows/ci.yml` (ubuntu: typecheck, lint, three test layers, coverage, placeholder/offline/licence/dead-code audits, icon check, production bundle), `ci-windows.yml` (Windows: native module rebuild for Electron, E2E, NSIS installer, checksums, artifacts) and `release.yml` (tag `v*`: verify, build, portable zip, checksums, notices, draft GitHub Release). Written and audited locally; the pipeline itself has not run on GitHub yet because the workflows exist only on this branch |
 | 24 | Final release audit | ⏳ | |
 
 ## Test results
@@ -41,18 +41,18 @@
 | Unit | 3 | 3 | 0 | 0 | `tests/unit/channels.test.ts` (registry ↔ handler parity, channel naming, clinical + scheduling + billing + inventory namespaces) |
 | Integration | 115 | 115 | 0 | 0 | `database.test.ts` (4), `patients.test.ts` (7), `clinical.test.ts` (15), `scheduling.test.ts` (11), `billing.test.ts` (9), `inventory.test.ts` (11), `accounting.test.ts` (6), `staff.test.ts` (6), `users.test.ts` (9), `roles.test.ts` (7), `printing.test.ts` (4), `backup.test.ts` (9), `notifications.test.ts` (5), `search.test.ts` (3), `preferences.test.ts` (4), `scheduler.test.ts` (3), `startup-state.test.ts` (2) |
 | Renderer | 65 | 65 | 0 | 0 | `activation.test.tsx` (4), `rbac-ui.test.tsx` (4), `clinical-ui.test.tsx` (5), `scheduling-ui.test.tsx` (4), `billing-ui.test.tsx` (6), `inventory-ui.test.tsx` (5), `accounting-ui.test.tsx` (9), `staff-ui.test.tsx` (4), `printing-ui.test.tsx` (2), `printing-settings.test.tsx` (2), `printing-surfaces.test.tsx` (3), `backup-ui.test.tsx` (3), `notifications-ui.test.tsx` (3), `search-ui.test.tsx` (3), `interface-settings.test.tsx` (3), `preferences-ui.test.tsx` (3), `recovery-ui.test.tsx` (2) |
-| E2E | – | – | – | – | Playwright workflows run against the packaged Windows build in CI |
-| Stress | – | – | – | – | dataset generators scheduled with checkpoint 20 |
+| E2E | – | – | – | – | **not written yet**: `playwright.config.ts` points at `tests/e2e/**`, which does not exist, so `npm run test:e2e` cannot pass until the 10 named workflows of `docs/TEST_PLAN.md` are implemented (next checkpoint, together with the E2E activation seam) |
+| Stress | – | – | – | – | `scripts/stress-seed.ts` written and verified at reduced scale (12 000 patients / 3 000 visits / 12 000 invoices + payments through the real services; the full 10k/100k target needs a quiet machine — the sandbox is heavily loaded and was killed mid-run); the perf-budget measurements belong to checkpoint 20 |
 
 ## Audit log
 
 | Audit | Date | Result |
 |---|---|---|
-| Dependency/license audit | – | pending |
-| Security checklist | – | pending |
-| No-placeholder scan | – | pending |
-| Dead-code review | – | pending |
-| Database relationship review | – | pending |
+| Dependency/license audit | 2026-09-30 | ✅ `scripts/audit-dependencies.mjs`: the 15 bundled components are all under accepted licences (MIT, ISC, OFL-1.1); copyleft/unknown licences fail the audit; `THIRD_PARTY_NOTICES.md` is committed and `--check` verifies it in CI |
+| Security checklist | – | pending (checkpoint 18) |
+| No-placeholder scan | 2026-09-30 | ✅ `scripts/audit-placeholders.mjs` clean over `src/**` (no TODO/FIXME/HACK, no "coming soon"/"not implemented" wording, no empty handlers, no `href="#"`) |
+| Dead-code review | 2026-09-30 | ✅ `scripts/audit-deadcode.mjs` with a tracked-debt baseline that is now empty: 164 declarations that nothing referenced (and 34 unused imports/constants ESLint reported as a consequence) were removed across 48 files; `tsc` for main and renderer clean, ESLint clean, all 183 tests pass after the removal |
+| Database relationship review | – | pending (checkpoint 18) |
 
 ## Open issues
 
@@ -62,6 +62,6 @@
 
 ## Next actions
 
-1. Repository infrastructure that package.json already references but that does not exist yet: `.github/workflows` (CI, Windows E2E, release), `electron-builder.yml`, `scripts/**` (icons, audits, stress seed, checksums) and `LICENSE.txt`.
-2. Remaining test layers: unit suites for money/datetime/Bengali/activation, the 10 named E2E workflows, negative tests and stress datasets.
-3. Audits and the Windows release build from CI (checkpoints 18-24).
+1. **E2E layer** (`tests/e2e/**`): the ten named Playwright workflows of `docs/TEST_PLAN.md` against the real Electron build, plus the activation seam they need — the workflows currently pass `DENTIVA_TEST_ACTIVATION_CODE`, which nothing in `src/main` reads, and the production activation code must never appear in the repository. Planned seam: the verifier honours an explicitly enabled test code only for non-packaged builds (or the E2E harness seeds an activated state into its scratch data directory), and the workflow stops exporting a variable the application ignores.
+2. Unit suites still thin around money/datetime/Bengali helpers and the activation verifier (`docs/TEST_PLAN.md` §4 asks for a named test per helper), and more negative-path tests (§108 list).
+3. Checkpoints 18-24: security checklist, UI/UX visual audit at the six resolutions/scaling factors, performance measurement on the stress dataset, full regression, the Windows installer run and clean-machine record, and the final release audit. Everything Windows-only must be observed on a Windows runner — the sandbox has no Wine/makensis and never runs the packaged application.

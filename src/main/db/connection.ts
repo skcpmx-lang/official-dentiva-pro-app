@@ -148,11 +148,6 @@ export function openDatabase(options: OpenOptions): DatabaseContext {
   }
 }
 
-/** Location of the SQLite file inside a data directory. */
-export function databasePath(dataDir: string): string {
-  return join(dataDir, 'data', 'dentiva.db')
-}
-
 /**
  * Copies the database aside before a migration runs. The snapshot is a plain SQLite file taken with
  * `VACUUM INTO`, so it can be restored even if this build is later replaced; it is registered in the

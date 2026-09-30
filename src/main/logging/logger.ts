@@ -141,8 +141,3 @@ export const nullLogger: Logger = {
   logDirectory: () => ''
 }
 
-export function setConsoleMirror(logger: Logger, enabled: boolean): void {
-  // The logger is created once; this helper exists so the dev-mode flag can be flipped safely.
-  void logger
-  void enabled
-}

@@ -10,9 +10,6 @@
 export type EpochMs = number
 /** Local calendar date, `YYYY-MM-DD`. */
 export type LocalDate = string
-/** Local clock time, `HH:mm` (24h storage; 12h rendering handled by the formatter). */
-export type LocalTime = string
-
 export const MS_PER_MINUTE = 60_000
 export const MS_PER_HOUR = 3_600_000
 export const MS_PER_DAY = 86_400_000
@@ -31,16 +28,6 @@ export function toLocalDate(ms: EpochMs): LocalDate {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** Local clock time of an instant, as `HH:mm`. */
-export function toLocalTime(ms: EpochMs): LocalTime {
-  const d = new Date(ms)
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-export function toLocalDateTime(ms: EpochMs): string {
-  return `${toLocalDate(ms)} ${toLocalTime(ms)}`
-}
-
 /** Parse `YYYY-MM-DD` (or a full ISO string) into local midnight of that day. */
 export function fromLocalDate(date: LocalDate): EpochMs {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date)
@@ -53,32 +40,6 @@ export function fromLocalDate(date: LocalDate): EpochMs {
     throw new Error(`Invalid calendar date: ${date}`)
   }
   return d.getTime()
-}
-
-export function isValidLocalDate(value: string): boolean {
-  try {
-    fromLocalDate(value)
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Parse `YYYY-MM-DD` or `YYYY-MM-DD HH:mm` into an instant.
- * Ambiguous/invalid input throws rather than silently producing NaN dates.
- */
-export function parseDateTimeInput(value: string): EpochMs {
-  const trimmed = value.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return fromLocalDate(trimmed)
-  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(trimmed)
-  if (!match) throw new Error(`Invalid date/time: ${value}`)
-  const base = fromLocalDate(match[1]!)
-  const hours = Number(match[2])
-  const minutes = Number(match[3])
-  const seconds = Number(match[4] ?? 0)
-  if (hours > 23 || minutes > 59 || seconds > 59) throw new Error(`Invalid time: ${value}`)
-  return base + hours * MS_PER_HOUR + minutes * MS_PER_MINUTE + seconds * 1000
 }
 
 export function startOfDay(ms: EpochMs): EpochMs {
@@ -96,50 +57,11 @@ export function startOfMonth(ms: EpochMs): EpochMs {
   return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
 }
 
-export function endOfMonth(ms: EpochMs): EpochMs {
-  const d = new Date(ms)
-  return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime() - 1
-}
-
-export function startOfYear(ms: EpochMs): EpochMs {
-  return new Date(new Date(ms).getFullYear(), 0, 1).getTime()
-}
-
 export function addDays(ms: EpochMs, days: number): EpochMs {
   const d = new Date(ms)
   // Calendar-safe: handles DST transitions without drifting an hour.
   d.setDate(d.getDate() + days)
   return d.getTime()
-}
-
-export function addMonths(ms: EpochMs, months: number): EpochMs {
-  const d = new Date(ms)
-  const day = d.getDate()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + months)
-  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
-  d.setDate(Math.min(day, lastDay))
-  return d.getTime()
-}
-
-export function addMinutes(ms: EpochMs, minutes: number): EpochMs {
-  return ms + minutes * MS_PER_MINUTE
-}
-
-export function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
-}
-
-export function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate()
-}
-
-export function daysBetween(fromMs: EpochMs, toMs: EpochMs): number {
-  return Math.round((startOfDay(toMs) - startOfDay(fromMs)) / MS_PER_DAY)
-}
-
-export function compareLocalDates(a: LocalDate, b: LocalDate): number {
-  return a === b ? 0 : a < b ? -1 : 1
 }
 
 /** Inclusive local-date range expressed in instants (start of first day → end of last day). */
@@ -150,14 +72,6 @@ export interface InstantRange {
 
 export function rangeFromDates(from: LocalDate, to: LocalDate): InstantRange {
   return { from: fromLocalDate(from), to: endOfDay(fromLocalDate(to)) }
-}
-
-export function rangeForDay(ms: EpochMs): InstantRange {
-  return { from: startOfDay(ms), to: endOfDay(ms) }
-}
-
-export function rangeForMonth(ms: EpochMs): InstantRange {
-  return { from: startOfMonth(ms), to: endOfMonth(ms) }
 }
 
 export type RangePreset = 'today' | 'yesterday' | 'last7' | 'last30' | 'last90' | 'lastYear' | 'thisMonth' | 'all' | 'custom'
@@ -217,38 +131,6 @@ export function resolveRange(preset: RangePreset, nowMs: EpochMs = now(), custom
   return { preset, from, to, fromDate: toLocalDate(from), toDate: toLocalDate(to) }
 }
 
-export const RANGE_PRESET_LABELS: Record<RangePreset, string> = {
-  today: 'Today',
-  yesterday: 'Yesterday',
-  last7: 'Last 7 days',
-  last30: 'Last 30 days',
-  last90: 'Last 90 days',
-  thisMonth: 'This month',
-  lastYear: 'Last 1 year',
-  all: 'All time',
-  custom: 'Custom range'
-}
-
-/** Month key `YYYY-MM` for grouping and period reports. */
-export function monthKey(ms: EpochMs): string {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
-}
-
-export function monthKeyLabel(key: string): string {
-  const [year, month] = key.split('-')
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const index = Number(month) - 1
-  return `${monthNames[index] ?? month} ${year}`
-}
-
-/** Ordered list of month keys covering the last `count` months ending at `ms` (inclusive). */
-export function lastMonthKeys(count: number, ms: EpochMs = now()): string[] {
-  const keys: string[] = []
-  for (let i = count - 1; i >= 0; i--) keys.push(monthKey(addMonths(startOfMonth(ms), -i)))
-  return keys
-}
-
 export interface Age {
   years: number
   months: number
@@ -288,16 +170,6 @@ export type DateFormat =
   | 'd MMM yyyy'
   | 'dd MMM yyyy'
   | 'dd MMMM yyyy'
-
-export const DATE_FORMATS: DateFormat[] = [
-  'dd/MM/yyyy',
-  'dd-MM-yyyy',
-  'MM/dd/yyyy',
-  'yyyy-MM-dd',
-  'd MMM yyyy',
-  'dd MMM yyyy',
-  'dd MMMM yyyy'
-]
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTHS_LONG = [
@@ -342,11 +214,6 @@ export function formatDate(ms: EpochMs, format: DateFormat = 'dd/MM/yyyy'): stri
   }
 }
 
-export function formatDateLong(ms: EpochMs): string {
-  const d = new Date(ms)
-  return `${pad(d.getDate())} ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`
-}
-
 export type TimeFormat = '12h' | '24h'
 
 export function formatTime(ms: EpochMs, format: TimeFormat = '12h'): string {
@@ -384,37 +251,3 @@ export function formatRelative(ms: EpochMs, atMs: EpochMs = now()): string {
   return formatDate(ms)
 }
 
-/** Weekday index with Sunday = 0, matching `dentist_schedules.weekday` and JS `Date.getDay()`. */
-export function weekdayIndex(ms: EpochMs): number {
-  return new Date(ms).getDay()
-}
-
-export const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-export const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-/** Build `HH:mm` → instant for a given local day. */
-export function combineDateAndTime(date: LocalDate, time: LocalTime): EpochMs {
-  const base = fromLocalDate(date)
-  const match = /^(\d{1,2}):(\d{2})$/.exec(time)
-  if (!match) throw new Error(`Invalid time: ${time}`)
-  const hours = Number(match[1])
-  const minutes = Number(match[2])
-  if (hours > 23 || minutes > 59) throw new Error(`Invalid time: ${time}`)
-  return base + hours * MS_PER_HOUR + minutes * MS_PER_MINUTE
-}
-
-/** Generate time slots between two `HH:mm` boundaries with a step in minutes. */
-export function timeSlots(start: LocalTime, end: LocalTime, stepMinutes: number): LocalTime[] {
-  const toMinutes = (value: LocalTime): number => {
-    const [h, m] = value.split(':').map(Number)
-    return (h ?? 0) * 60 + (m ?? 0)
-  }
-  const slots: LocalTime[] = []
-  const startMinutes = toMinutes(start)
-  const endMinutes = toMinutes(end)
-  if (stepMinutes <= 0) throw new Error('Slot step must be positive')
-  for (let t = startMinutes; t + stepMinutes <= endMinutes; t += stepMinutes) {
-    slots.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`)
-  }
-  return slots
-}

@@ -30,8 +30,6 @@ export const zMachineInfo = z.object({
 })
 
 export const zActionResult = z.object({ ok: z.literal(true) })
-export const zCountResult = z.object({ count: z.number() })
-
 export const zSessionSummary = z.object({
   id: z.string(),
   userId: z.number(),
@@ -280,7 +278,6 @@ export type SessionSummary = z.output<typeof zSessionSummary>
 export type SessionState = z.output<typeof zSessionState>
 export type AuditEntry = z.output<typeof zAuditEntry>
 export type AuditFilter = z.input<typeof zAuditFilter>
-export type SystemEvent = z.output<typeof zSystemEvent>
 export type Diagnostics = z.output<typeof zDiagnostics>
 export type AboutInfo = z.output<typeof zAboutInfo>
 

@@ -86,7 +86,6 @@ export function teethFor(dentition: Dentition): readonly ToothDef[] {
   return dentition === 'adult' ? ADULT_TEETH : PRIMARY_TEETH
 }
 
-export const ALL_TOOTH_CODES: readonly string[] = [...ADULT_TEETH, ...PRIMARY_TEETH].map((t) => t.code)
 const TOOTH_MAP = new Map<string, ToothDef>([...ADULT_TEETH, ...PRIMARY_TEETH].map((t) => [t.code, t]))
 
 export function isToothCode(code: string, dentition?: Dentition): boolean {
@@ -163,7 +162,6 @@ export const DEFAULT_TOOTH_CONDITIONS: readonly ConditionDef[] = [
   { code: 'other', label: 'Other finding', color: 'chart-other', kind: 'finding', activeByDefault: true }
 ]
 
-export const TOOTH_CONDITIONS = DEFAULT_TOOTH_CONDITIONS
 const CONDITION_MAP = new Map(DEFAULT_TOOTH_CONDITIONS.map((c) => [c.code, c]))
 
 export function conditionInfo(code: string): ConditionDef | undefined {
@@ -183,65 +181,6 @@ export interface ChartEntry {
   treatmentCode: string | null
   status: ChartEntryStatus
   note: string | null
-}
-
-/** Highest-priority condition per tooth, used to colour a chart cell that has several findings. */
-const CONDITION_PRIORITY: Record<string, number> = {
-  missing: 90,
-  extraction: 85,
-  fracture: 80,
-  impacted: 70,
-  pulpitis: 65,
-  periapical: 64,
-  caries: 60,
-  gingival_caries: 58,
-  recurrent_caries: 57,
-  periodontitis: 50,
-  gingivitis: 45,
-  dry_socket: 44,
-  implant: 40,
-  crown: 38,
-  bridge: 37,
-  root_canal: 36,
-  restoration: 35,
-  orthodontic: 30,
-  abrasion: 20,
-  attrition: 19,
-  erosion: 18,
-  unerupted: 15,
-  other: 10,
-  healthy: 0
-}
-
-export function summarizeChart(entries: readonly ChartEntry[]): Map<string, ChartEntry[]> {
-  const byTooth = new Map<string, ChartEntry[]>()
-  for (const entry of entries) {
-    const list = byTooth.get(entry.toothCode) ?? []
-    list.push(entry)
-    byTooth.set(entry.toothCode, list)
-  }
-  return byTooth
-}
-
-export function dominantCondition(entries: readonly ChartEntry[]): string | null {
-  let best: ChartEntry | null = null
-  for (const entry of entries) {
-    if (entry.status !== 'active') continue
-    if (!best || (CONDITION_PRIORITY[entry.conditionCode] ?? 5) > (CONDITION_PRIORITY[best.conditionCode] ?? 5)) best = entry
-  }
-  return best?.conditionCode ?? null
-}
-
-export function chartSummaryText(entries: readonly ChartEntry[]): string {
-  const counts = new Map<string, number>()
-  for (const entry of entries) {
-    if (entry.status !== 'active') continue
-    counts.set(entry.conditionCode, (counts.get(entry.conditionCode) ?? 0) + 1)
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([code, count]) => `${conditionLabel(code)} (${count})`)
-    .join(', ')
 }
 
 /** Parse a free-text tooth list ("11, 12, 36" / "11-13") into validated FDI codes. */

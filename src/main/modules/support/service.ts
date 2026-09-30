@@ -1,5 +1,4 @@
-import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import {statSync } from 'node:fs'
 import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
 import { readSchemaVersion } from '../../db/migrate'
@@ -195,18 +194,3 @@ export function collectAboutInfo(ctx: ServiceContext): AboutInfo {
   }
 }
 
-/** Create the support bundle folder listing (used by Settings → Support). */
-export function listLogFiles(ctx: ServiceContext): Array<{ name: string, sizeBytes: number, modifiedAt: number }> {
-  assertPermission(ctx, 'settings.view')
-  try {
-    return readdirSync(ctx.host.paths.logsDir)
-      .filter((name) => name.endsWith('.log'))
-      .map((name) => {
-        const stats = statSync(join(ctx.host.paths.logsDir, name))
-        return { name, sizeBytes: stats.size, modifiedAt: stats.mtimeMs }
-      })
-      .sort((a, b) => b.modifiedAt - a.modifiedAt)
-  } catch {
-    return []
-  }
-}

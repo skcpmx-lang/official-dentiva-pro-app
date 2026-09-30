@@ -1,7 +1,7 @@
 import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
-import { conflictError, notFoundError, stateError, validationError } from '@shared/errors'
-import { conditionInfo, isToothCode, parseToothList, toothInfo } from '@shared/dental'
+import {notFoundError, stateError, validationError } from '@shared/errors'
+import {conditionInfo, isToothCode, toothInfo } from '@shared/dental'
 import { foldForSearch, normalizeBengali } from '@shared/bengali'
 import type { zChartEntryInput } from '@shared/contracts'
 import { z } from 'zod'
@@ -66,11 +66,6 @@ function colorFor(code: string): string | null {
 
 function conditionName(code: string): string {
   return conditionInfo(code)?.label ?? code.replace(/_/g, ' ')
-}
-
-export function dentalConditionFor(code: string): { known: boolean, category: string, appliesTooth: boolean } {
-  const info = conditionInfo(code)
-  return info ? { known: true, category: info.kind, appliesTooth: true } : { known: false, category: 'finding', appliesTooth: true }
 }
 
 /**
@@ -366,18 +361,3 @@ export function saveCondition(
   return { ok: true }
 }
 
-export function chartSummaryForPatient(ctx: ServiceContext, patientId: number): string {
-  const chart = getChart(ctx, patientId)
-  return chart.summaryText
-}
-
-export function assertChartToothUnused(ctx: ServiceContext, toothCode: string): void {
-  const row = ctx.db
-    .prepare('SELECT COUNT(*) AS count FROM dental_chart_entries WHERE tooth_code = ? AND status = ?')
-    .get(toothCode, 'active') as { count: number }
-  if (row.count > 0) throw conflictError(`Tooth ${toothCode} already has ${row.count} active chart entr(y/ies).`)
-}
-
-export function teethFromCodes(codes: string): string[] {
-  return parseToothList(codes)
-}

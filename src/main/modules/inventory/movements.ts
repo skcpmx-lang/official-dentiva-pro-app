@@ -3,17 +3,7 @@ import { assertPermission } from '../../context'
 import { notFoundError, stateError, validationError } from '@shared/errors'
 import { foldForSearch } from '@shared/bengali'
 import { endOfDay, fromLocalDate, resolveRange, type InstantRange, type RangePreset } from '@shared/datetime'
-import {
-  applyMovement,
-  batchesForItem,
-  itemStock,
-  loadItem,
-  mapMovement,
-  recalculateBatch,
-  type BatchRecord,
-  type InventoryItemRecord,
-  type MovementInput,
-  type MovementRecord
+import {applyMovement, batchesForItem, itemStock, loadItem, mapMovement, type BatchRecord, type InventoryItemRecord, type MovementInput, type MovementRecord
 } from './items'
 export type MovementFilter = {
   itemId?: number
@@ -287,12 +277,6 @@ export function findOrCreateBatch(
       note: input.note
     })
   return Number(result.lastInsertRowid)
-}
-
-/** Recompute every batch cache for an item (used by tests and the consistency check). */
-export function recalculateItemBatches(ctx: ServiceContext, itemId: number): void {
-  const rows = ctx.db.prepare('SELECT id FROM inventory_batches WHERE item_id = ?').all(itemId) as Array<{ id: number }>
-  for (const row of rows) recalculateBatch(ctx, row.id)
 }
 
 /** Guard used by purchases: an expiry-tracked line must carry an expiry date. */

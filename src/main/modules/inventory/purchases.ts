@@ -341,18 +341,3 @@ export function setPurchasePaid(ctx: ServiceContext, input: { id: number, paidMi
   return getPurchase(ctx, input.id)
 }
 
-/** Stock movements caused by a purchase, used by the supplier history screen. */
-export function purchaseMovements(
-  ctx: ServiceContext,
-  purchaseId: number
-): Array<{ itemName: string, quantity: number, unit: string, movementDate: string }> {
-  const purchase = getPurchase(ctx, purchaseId)
-  const rows = ctx.db
-    .prepare(
-      `SELECT i.name AS item_name, m.quantity, i.unit, m.movement_date
-         FROM inventory_movements m JOIN inventory_items i ON i.id = m.item_id
-        WHERE m.reference LIKE ? ORDER BY m.id ASC`
-    )
-    .all(`${purchase.purchaseNo}/L%`) as Array<{ item_name: string, quantity: number, unit: string, movement_date: string }>
-  return rows.map((row) => ({ itemName: row.item_name, quantity: row.quantity, unit: row.unit, movementDate: row.movement_date }))
-}

@@ -1,5 +1,5 @@
 import type { Db } from './connection'
-import { SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL, SCHEMA_V2_SQL, SCHEMA_VERSION } from './schema'
+import {SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL, SCHEMA_V2_SQL } from './schema'
 
 export interface Migration {
   version: number
@@ -58,15 +58,6 @@ export function readSchemaVersion(db: Db): number {
   }
   const userVersion = db.pragma('user_version', { simple: true }) as number
   return Number.isFinite(userVersion) ? userVersion : 0
-}
-
-export function migrationsPending(db: Db): Migration[] {
-  const current = readSchemaVersion(db)
-  return MIGRATIONS.filter((migration) => migration.version > current)
-}
-
-export function schemaIsCurrent(db: Db): boolean {
-  return readSchemaVersion(db) >= SCHEMA_VERSION
 }
 
 export function ensureSchemaTable(db: Db): void {

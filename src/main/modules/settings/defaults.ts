@@ -1,5 +1,3 @@
-import type { DateFormat, TimeFormat } from '@shared/datetime'
-
 /**
  * Application settings: key → default value, plus the type used for validation.
  * Settings are stored as TEXT rows in the `settings` table; `settingsService` enforces these types,
@@ -99,25 +97,6 @@ export function settingDef(key: string): SettingDef | undefined {
 export function isKnownSetting(key: string): boolean {
   return DEF_MAP.has(key)
 }
-
-export const DEFAULT_DATE_FORMAT: DateFormat = 'dd/MM/yyyy'
-export const DEFAULT_TIME_FORMAT: TimeFormat = '12h'
-
-/** Backup frequency options presented in Settings. */
-export const BACKUP_FREQUENCY_OPTIONS = [
-  { value: '0', label: 'Disabled' },
-  { value: '7', label: 'Every 7 days' },
-  { value: '15', label: 'Every 15 days' },
-  { value: '30', label: 'Every 30 days' }
-] as const
-
-export const AUTO_LOCK_OPTIONS = [
-  { value: '0', label: 'Disabled' },
-  { value: '5', label: '5 minutes' },
-  { value: '10', label: '10 minutes' },
-  { value: '15', label: '15 minutes' },
-  { value: '30', label: '30 minutes' }
-] as const
 
 const GROUP_LABELS: Record<string, string> = {
   practice: 'Clinic & practice',

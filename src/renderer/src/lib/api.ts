@@ -123,38 +123,6 @@ export function useInvoke<C extends ChannelId>(
   }
 }
 
-export interface MutationState<C extends ChannelId> {
-  run(payload: ChannelInput<C>): Promise<ChannelOutput<C>>
-  loading: boolean
-  error: ApiError | null
-  reset(): void
-}
-
-/** Mutation hook with in-flight tracking; errors are rethrown so callers can react (e.g. keep a dialog open). */
-export function useMutation<C extends ChannelId>(channel: C): MutationState<C> {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<ApiError | null>(null)
-  const channelRef = useRef(channel)
-  channelRef.current = channel
-
-  const run = useCallback(async (payload: ChannelInput<C>): Promise<ChannelOutput<C>> => {
-    setLoading(true)
-    setError(null)
-    try {
-      return await invoke(channelRef.current, payload)
-    } catch (caught) {
-      const apiError =
-        caught instanceof ApiError ? caught : new ApiError({ code: 'E_INTERNAL', message: 'The action could not be completed. Please try again.' })
-      setError(apiError)
-      throw apiError
-    } finally {
-      setLoading(false)
-    }
-  }, []) as MutationState<C>['run']
-
-  return { run, loading, error, reset: () => setError(null) }
-}
-
 /** Human-readable summary of an API failure, used by error states and toasts. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message
@@ -162,10 +130,3 @@ export function errorMessage(error: unknown): string {
   return 'Something went wrong. Please try again.'
 }
 
-export function isPermissionError(error: unknown): boolean {
-  return error instanceof ApiError && error.code === 'E_PERMISSION'
-}
-
-export function isLockedError(error: unknown): boolean {
-  return error instanceof ApiError && error.code === 'E_LOCKED'
-}

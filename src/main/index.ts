@@ -1,5 +1,4 @@
 import { app, BrowserWindow, ipcMain, session as electronSession, shell } from 'electron'
-import { existsSync, renameSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { markReady, markRecovery, markStarting, startupState } from './startup/state'
 import { createElectronHost } from './platform/electronHost'
@@ -445,15 +444,6 @@ function scheduleAutomaticBackups(): void {
   timer.unref()
 }
 
-export const processState = {
-  isRecoveryMode: (): boolean => recoveryReason !== null,
-  recoveryReason: (): string | null => recoveryReason,
-  setMaintenanceMode: (value: boolean): void => {
-    maintenanceMode = value
-  },
-  dataAvailable: (): boolean => database !== null
-}
-
 /** Re-open the database after a restore without restarting the process. */
 export function reopenDatabase(): boolean {
   shutdownDatabase()
@@ -466,32 +456,6 @@ export function reopenDatabase(): boolean {
     host?.logger.error('Failed to rebuild IPC services after reopening the database', error)
     return false
   }
-}
-
-/** Reset a corrupt database by moving it aside, then creating a fresh one. */
-export function archiveDatabaseAndReset(): { archived: string | null } {
-  if (!host) return { archived: null }
-  const target = host.paths.databaseFile
-  let archived: string | null = null
-  try {
-    if (existsSync(target)) {
-      archived = `${target}.broken-${Date.now()}`
-      renameSync(target, archived)
-    }
-    for (const suffix of ['-wal', '-shm']) {
-      try {
-        if (existsSync(`${target}${suffix}`)) unlinkSync(`${target}${suffix}`)
-      } catch {
-        /* ignore lock files that are still held */
-      }
-    }
-  } catch (error) {
-    host.logger.error('Could not archive the damaged database', error)
-    return { archived: null }
-  }
-  openDatabaseSafely()
-  if (database) router = buildRouter()
-  return { archived }
 }
 
 void app.whenReady().then(bootstrap)

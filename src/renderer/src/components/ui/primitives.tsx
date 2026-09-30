@@ -1,5 +1,5 @@
-import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from 'react'
-import { AlertTriangle, ChevronLeft, ChevronRight, Inbox, Loader2, Lock, SearchIcon, ShieldAlert, WifiOff } from 'lucide-react'
+import type {ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import {SearchIcon, ShieldAlert } from 'lucide-react'
 
 /**
  * UI primitives. Every control here has a complete state set (default, hover, focus, active, disabled,
@@ -115,10 +115,6 @@ export function CardHeader({ title, subtitle, icon, actions }: { title: ReactNod
 
 export function CardBody({ children, flush, className }: { children: ReactNode, flush?: boolean, className?: string }): ReactNode {
   return <div className={['card__body', flush ? 'card__body--flush' : '', className].filter(Boolean).join(' ')}>{children}</div>
-}
-
-export function CardFooter({ children }: { children: ReactNode }): ReactNode {
-  return <div className="card__footer">{children}</div>
 }
 
 export interface KpiCardProps {
@@ -252,40 +248,6 @@ export function SearchInput({
   )
 }
 
-export function EmptyState({
-  title,
-  message,
-  action,
-  icon
-}: {
-  title: string
-  message?: string
-  action?: ReactNode
-  icon?: ReactNode
-}): ReactNode {
-  return (
-    <div className="state">
-      <span className="state__icon">{icon ?? <Inbox size={22} />}</span>
-      <span className="state__title">{title}</span>
-      {message ? <span className="state__message">{message}</span> : null}
-      {action}
-    </div>
-  )
-}
-
-export function ErrorState({ title, message, action }: { title: string, message?: string, action?: ReactNode }): ReactNode {
-  return (
-    <div className="state state--error">
-      <span className="state__icon">
-        <AlertTriangle size={22} />
-      </span>
-      <span className="state__title">{title}</span>
-      {message ? <span className="state__message">{message}</span> : null}
-      {action}
-    </div>
-  )
-}
-
 export function PermissionDenied({ message }: { message?: string }): ReactNode {
   return (
     <div className="state">
@@ -297,50 +259,6 @@ export function PermissionDenied({ message }: { message?: string }): ReactNode {
         {message ?? 'Your role does not include this permission. Ask an administrator if you need access.'}
       </span>
     </div>
-  )
-}
-
-export function OfflineState(): ReactNode {
-  return (
-    <div className="state">
-      <span className="state__icon">
-        <WifiOff size={22} />
-      </span>
-      <span className="state__title">The selected printer or device is not available</span>
-      <span className="state__message">Reconnect the device and try again, or save the document as a PDF.</span>
-    </div>
-  )
-}
-
-export function LockedNotice(): ReactNode {
-  return (
-    <div className="state">
-      <span className="state__icon">
-        <Lock size={22} />
-      </span>
-      <span className="state__title">Application locked</span>
-      <span className="state__message">Enter your password to continue working.</span>
-    </div>
-  )
-}
-
-export function LoadingState({ label = 'Loading…', rows = 4 }: { label?: string, rows?: number }): ReactNode {
-  return (
-    <div aria-busy="true" aria-live="polite" style={{ padding: 'var(--sp-3) 0' }}>
-      <span className="visually-hidden">{label}</span>
-      {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="skeleton skeleton-row" style={{ width: `${92 - index * 8}%` }} />
-      ))}
-    </div>
-  )
-}
-
-export function InlineSpinner({ label }: { label: string }): ReactNode {
-  return (
-    <span className="row" role="status" aria-live="polite">
-      <Loader2 size={16} className="btn__spinner" style={{ border: 'none', animation: 'spin 900ms linear infinite' }} />
-      <span className="small muted">{label}</span>
-    </span>
   )
 }
 
@@ -406,75 +324,3 @@ export function Switch({
   )
 }
 
-export function Pagination({
-  total,
-  limit,
-  offset,
-  onOffsetChange,
-  onLimitChange
-}: {
-  total: number
-  limit: number
-  offset: number
-  onOffsetChange(offset: number): void
-  onLimitChange?(limit: number): void
-}): ReactNode {
-  const page = Math.floor(offset / limit) + 1
-  const pages = Math.max(1, Math.ceil(total / limit))
-  const from = total === 0 ? 0 : offset + 1
-  const to = Math.min(offset + limit, total)
-  return (
-    <div className="pagination">
-      <span>
-        Showing {from}–{to} of {total}
-      </span>
-      <div className="pagination__pages">
-        {onLimitChange ? (
-          <select
-            className="field__select"
-            style={{ width: 92, height: 32, minHeight: 32 }}
-            value={limit}
-            aria-label="Rows per page"
-            onChange={(event) => onLimitChange(Number(event.target.value))}
-          >
-            {[25, 50, 100, 250].map((size) => (
-              <option key={size} value={size}>
-                {size} / page
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<ChevronLeft size={16} />}
-          disabled={page <= 1}
-          onClick={() => onOffsetChange(Math.max(0, offset - limit))}
-          aria-label="Previous page"
-        />
-        <span className="small muted">
-          Page {page} of {pages}
-        </span>
-        <Button
-          size="sm"
-          variant="ghost"
-          icon={<ChevronRight size={16} />}
-          disabled={page >= pages}
-          onClick={() => onOffsetChange(offset + limit)}
-          aria-label="Next page"
-        />
-      </div>
-    </div>
-  )
-}
-
-/** Small helper for numeric inputs so money/quantity fields behave predictably across keyboards. */
-export function numberInputProps(min?: number, max?: number, step?: number): InputHTMLAttributes<HTMLInputElement> {
-  return {
-    type: 'number',
-    inputMode: 'decimal',
-    min,
-    max,
-    step
-  }
-}

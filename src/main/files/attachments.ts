@@ -107,10 +107,4 @@ export function removeAttachment(dataDir: string, relativePath: string): void {
   }
 }
 
-/** Remove every stored file of a patient (used only by the explicit "erase clinic data" workflow). */
-export function removeAttachmentDirectory(attachmentsDir: string, patientId: number): void {
-  const directory = patientDirectory(attachmentsDir, patientId)
-  rmSync(directory, { recursive: true, force: true })
-}
-
 export { MAX_ATTACHMENT_BYTES }

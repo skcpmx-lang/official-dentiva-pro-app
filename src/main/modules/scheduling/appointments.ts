@@ -481,14 +481,3 @@ export function appointmentSlots(ctx: ServiceContext, input: { date: string, den
   return slots
 }
 
-/** Count of appointments in a local date range, used by the dashboard and reports. */
-export function countAppointments(ctx: ServiceContext, from: string, to: string): number {
-  const row = ctx.db
-    .prepare("SELECT COUNT(*) AS count FROM appointments WHERE is_deleted = 0 AND status NOT IN ('cancelled','no_show') AND scheduled_date >= ? AND scheduled_date <= ?")
-    .get(from, to) as { count: number }
-  return row.count
-}
-
-export function statusLabel(status: AppointmentStatus): string {
-  return status.replace('_', ' ')
-}

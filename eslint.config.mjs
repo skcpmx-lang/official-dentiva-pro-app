@@ -29,7 +29,9 @@ export default tseslint.config(
     rules: { ...reactHooks.configs.recommended.rules }
   },
   {
-    files: ['scripts/**/*.mjs'],
-    languageOptions: { globals: globals.node }
+    files: ['scripts/**/*.mjs', 'scripts/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    /* Scripts are command-line tools operated from a terminal; their progress output is the interface. */
+    rules: { 'no-console': 'off' }
   }
 )

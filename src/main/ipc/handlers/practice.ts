@@ -1,10 +1,9 @@
 import type { ServiceContext } from '../../context'
-import { AppError } from '@shared/errors'
 import { getAllSettings, updateSettings, getClinicProfile, updateClinicProfile, getSetting } from '../../modules/settings/service'
 import { SETTING_DEFS, settingGroup } from '../../modules/settings/defaults'
 import { listDentists, saveDentist, setDentistActive, archiveDentist, updateDentistPhoto, dentistsOnDuty } from '../../modules/dentists/service'
 import { listStaff, getStaff, saveStaff, archiveStaff, updateStaffPhoto } from '../../modules/staff/service'
-import { listUsers, getUser, saveUser, setUserActive, resetUserPassword, unlockUser, deleteUser, loginHistory } from '../../modules/users/service'
+import {listUsers, saveUser, setUserActive, resetUserPassword, unlockUser, deleteUser, loginHistory } from '../../modules/users/service'
 import { listRoles, saveRole, deleteRole, permissionCatalog } from '../../modules/roles/service'
 import { getPreferences, listRecentlyViewed, setPreferences } from '../../modules/preferences/service'
 import { storeImage, deleteStoredFile, resolveStoredPath } from '../../files/storage'
@@ -141,10 +140,3 @@ export function createPracticeHandlers(deps: HandlerDeps): PartialHandlerMap {
   }
 }
 
-export function getUserOrThrow(ctx: ServiceContext, id: number): ReturnType<typeof getUser> {
-  try {
-    return getUser(ctx, id)
-  } catch {
-    throw new AppError('E_NOT_FOUND', 'The requested user could not be found.')
-  }
-}

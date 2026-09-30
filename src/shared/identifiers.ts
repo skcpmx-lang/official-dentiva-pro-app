@@ -46,30 +46,6 @@ export function patientCode(date: Date, sequence: number): string {
   return formatIdentifier({ prefix: 'DP', date, sequence })
 }
 
-export function visitNumber(date: Date, sequence: number): string {
-  return formatIdentifier({ prefix: 'V', date, sequence })
-}
-
-export function prescriptionNumber(date: Date, sequence: number): string {
-  return formatIdentifier({ prefix: 'Rx', date, sequence })
-}
-
-export function invoiceNumber(date: Date, sequence: number, prefix = 'INV'): string {
-  return formatIdentifier({ prefix: sanitizePrefix(prefix, 'INV'), date, sequence })
-}
-
-export function receiptNumber(date: Date, sequence: number): string {
-  return formatIdentifier({ prefix: 'RCP', date, sequence })
-}
-
-export function purchaseNumber(date: Date, sequence: number): string {
-  return formatIdentifier({ prefix: 'PO', date, sequence })
-}
-
-export function accountingNumber(date: Date, sequence: number): string {
-  return formatIdentifier({ prefix: 'ACC', date, sequence })
-}
-
 export function batchNumber(date: Date, sequence: number): string {
   return `B-${dayScope(date)}-${String(sequence).padStart(2, '0')}`
 }
@@ -80,15 +56,3 @@ export function sanitizePrefix(prefix: string, fallback: string): string {
   return cleaned.length >= 2 ? cleaned : fallback
 }
 
-const PATIENT_CODE_PATTERN = /^DP-\d{4}-\d{4,}$/
-
-export function isValidPatientCode(code: string): boolean {
-  return PATIENT_CODE_PATTERN.test(code)
-}
-
-/** Backwards-compatible parse used by search and CSV import. */
-export function parseIdentifier(code: string): { prefix: string; period: string; sequence: number } | null {
-  const match = /^([A-Za-z]{1,3})-(\d{4})-(\d{3,6})$/.exec(code.trim())
-  if (!match) return null
-  return { prefix: match[1]!, period: match[2]!, sequence: Number(match[3]) }
-}

@@ -1,6 +1,6 @@
 import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
-import { AppError, conflictError, notFoundError, validationError } from '@shared/errors'
+import {conflictError, notFoundError, validationError } from '@shared/errors'
 import { foldForSearch, normalizeBengali, normalizePhone } from '@shared/bengali'
 import { ageAt, toLocalDate } from '@shared/datetime'
 import { nextCode } from '../../db/counters'
@@ -188,11 +188,6 @@ export function getPatient(ctx: ServiceContext, id: number): PatientRecord {
   const row = loadPatientRow(ctx, id)
   if (!row) throw notFoundError('patient', id)
   return mapPatient(row, ctx.now())
-}
-
-export function findPatientByCode(ctx: ServiceContext, code: string): PatientRecord | null {
-  const row = ctx.db.prepare(`${PATIENT_SELECT} WHERE p.code = ? AND p.is_deleted = 0`).get(code.trim().toUpperCase()) as PatientRow | undefined
-  return row ? mapPatient(row, ctx.now()) : null
 }
 
 export interface PatientFilter {
@@ -1296,15 +1291,6 @@ export function getPatientSummary(ctx: ServiceContext, id: number): PatientSumma
     allergies: patient.allergies,
     medicalHistory: patient.medicalHistory,
     activeChartFindings
-  }
-}
-
-/** Guard used by other modules: throws unless the patient exists and is not archived. */
-export function assertPatientActive(ctx: ServiceContext, patientId: number): void {
-  const row = ctx.db.prepare('SELECT status, is_deleted FROM patients WHERE id = ?').get(patientId) as { status: string, is_deleted: number } | undefined
-  if (!row || row.is_deleted === 1) throw notFoundError('patient', patientId)
-  if (row.status === 'archived') {
-    throw new AppError('E_STATE', 'This patient is archived. Restore the record before adding new activity.', { detail: { patientId } })
   }
 }
 

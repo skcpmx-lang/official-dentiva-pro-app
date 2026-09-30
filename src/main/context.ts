@@ -1,6 +1,6 @@
 import type { Db } from './db/connection'
 import type { HostServices } from './platform/types'
-import { AppError, permissionError, lockedError } from '@shared/errors'
+import {permissionError } from '@shared/errors'
 import type { Actor } from '@shared/permissions'
 
 export interface AuditEntryInput {
@@ -147,23 +147,3 @@ export function hasPermission(ctx: ServiceContext, permission: string): boolean 
   return ctx.actor.permissions.has(permission)
 }
 
-/**
- * Business rule: discount authority. Returns the maximum discount in basis points allowed for the
- * actor, or `null` when unlimited. Any service computing an invoice discount must call this.
- */
-export function assertDiscountAllowed(ctx: ServiceContext, discountBasisPoints: number): void {
-  if (discountBasisPoints < 0) throw new AppError('E_VALIDATION', 'Discount cannot be negative.')
-  if (ctx.actor.permissions.has('billing.discount_override')) return
-  const limit = ctx.actor.maxDiscountBasisPoints ?? 0
-  if (discountBasisPoints > limit) {
-    throw new AppError(
-      'E_PERMISSION',
-      `Your role allows a discount of up to ${(limit / 100).toFixed(limit % 100 === 0 ? 0 : 2)} %. Ask an administrator for approval or reduce the discount.`,
-      { detail: { requestedBp: discountBasisPoints, limitBp: limit } }
-    )
-  }
-}
-
-export function assertUnlocked(sessionLocked: boolean): void {
-  if (sessionLocked) throw lockedError()
-}

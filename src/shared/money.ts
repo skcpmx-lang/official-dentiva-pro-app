@@ -12,22 +12,8 @@ export const MICRO_PER_TAKA = 10_000
 export type Micro = number
 
 export const BDT_SYMBOL = '৳'
-export const BDT_CODE = 'BDT'
-
 export function zero(): Micro {
   return 0
-}
-
-export function microFromTaka(taka: number): Micro {
-  return Math.round(taka * MICRO_PER_TAKA)
-}
-
-export function microToTakaNumber(micro: Micro): number {
-  return micro / MICRO_PER_TAKA
-}
-
-export function isMicro(value: unknown): value is Micro {
-  return typeof value === 'number' && Number.isSafeInteger(value)
 }
 
 export function add(...values: Micro[]): Micro {
@@ -38,14 +24,6 @@ export function add(...values: Micro[]): Micro {
 
 export function sub(a: Micro, b: Micro): Micro {
   return a - b
-}
-
-export function negate(value: Micro): Micro {
-  return -value
-}
-
-export function multiply(value: Micro, factor: number): Micro {
-  return Math.round(value * factor)
 }
 
 /** Quantity multiplication where quantity may be fractional (e.g. 1.5 units, 0.25 kg). */
@@ -64,12 +42,6 @@ export function divideRoundHalfUp(numerator: number, denominator: number): numbe
   const n = Math.abs(numerator)
   const d = Math.abs(denominator)
   return sign * Math.floor((n + d / 2) / d)
-}
-
-/** Percentage value of `part` inside `whole`, in basis points (0 when whole is 0). */
-export function percentOf(part: Micro, whole: Micro): number {
-  if (whole === 0) return 0
-  return Math.round((part * 10_000) / whole)
 }
 
 export interface LineAmount {
@@ -194,15 +166,3 @@ export function formatBDTShort(micro: Micro): string {
   return formatBDT(micro)
 }
 
-/** Format basis points as a human percentage: 1250 → "12.5 %". */
-export function formatBasisPoints(bp: number): string {
-  const value = bp / 100
-  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')} %`
-}
-
-export function parsePercentToBasisPoints(raw: string | number): number {
-  const value = typeof raw === 'number' ? raw : Number(String(raw).replace(/[%\s]/g, ''))
-  if (!Number.isFinite(value)) throw new Error('Invalid percentage')
-  if (value < 0 || value > 100) throw new Error('Percentage must be between 0 and 100')
-  return Math.round(value * 100)
-}

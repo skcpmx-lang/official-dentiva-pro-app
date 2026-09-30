@@ -673,7 +673,3 @@ export function markPrescriptionPrinted(ctx: ServiceContext, id: number, printer
   })
 }
 
-export function countPrescriptions(ctx: ServiceContext): number {
-  const row = ctx.db.prepare('SELECT COUNT(*) AS count FROM prescriptions WHERE is_deleted = 0').get() as { count: number }
-  return row.count
-}

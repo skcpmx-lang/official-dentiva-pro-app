@@ -33,8 +33,6 @@ export const DASHBOARD_PANEL_IDS: readonly string[] = DASHBOARD_PANELS.map((pane
 export const DASHBOARD_RANGES = ['today', 'last7', 'last30', 'thisMonth'] as const
 export type DashboardRange = (typeof DASHBOARD_RANGES)[number]
 
-export const DENSITIES = ['comfortable', 'compact'] as const
-
 /** A stored panel list, emptied of anything an older build may have written. */
 export function sanitizePanelList(value: unknown): string[] {
   if (!Array.isArray(value)) return []

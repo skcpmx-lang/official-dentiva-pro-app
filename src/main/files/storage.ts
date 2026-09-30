@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, statSync } from 'node:fs'
+import {existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createHash } from 'node:crypto'
@@ -109,36 +109,6 @@ export function deleteStoredFile(absolutePath: string, dataDir: string): void {
     rmSync(absolutePath, { force: true })
   } catch {
     /* deletion is best effort; a stray file is preferable to a failed workflow */
-  }
-}
-
-export function fileSize(path: string): number {
-  try {
-    return statSync(path).size
-  } catch {
-    return 0
-  }
-}
-
-export function readStoredFile(path: string): Buffer {
-  return readFileSync(path)
-}
-
-/** Write an arbitrary export (CSV/PDF) into the exports folder with a predictable, safe name. */
-export function writeExport(dataDir: string, fileName: string, data: Buffer | string): StoredFile {
-  const directory = safeJoin(dataDir, 'exports')
-  ensureDir(directory)
-  const { baseName, extension } = sanitizeFileName(fileName, '.csv')
-  const finalName = `${baseName}${extension}`
-  const absolutePath = safeJoin(directory, finalName)
-  const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data
-  writeFileSync(absolutePath, buffer)
-  return {
-    absolutePath,
-    relativePath: join('exports', finalName),
-    bytes: buffer.length,
-    sha256: createHash('sha256').update(buffer).digest('hex'),
-    mime: extension === '.pdf' ? 'application/pdf' : extension === '.csv' ? 'text/csv' : 'application/octet-stream'
   }
 }
 

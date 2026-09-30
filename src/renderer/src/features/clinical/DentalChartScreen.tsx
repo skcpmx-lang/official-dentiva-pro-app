@@ -8,7 +8,7 @@ import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { useFormatters } from '../../lib/format'
 import { usePermission } from '../../store/appStore'
 import { ToothGrid } from './ToothGrid'
-import type { ChartCondition, ChartEntry } from '../../lib/types'
+import type {ChartEntry } from '../../lib/types'
 
 type DentitionChoice = 'adult' | 'primary'
 
@@ -307,7 +307,3 @@ export function DentalChartScreen(): ReactNode {
   )
 }
 
-/** Exported for the visit screen, which shows the same palette next to the treatment lines. */
-export function conditionOptions(conditions: ChartCondition[]): Array<{ value: string, label: string }> {
-  return conditions.filter((condition) => condition.isActive).map((condition) => ({ value: condition.code, label: condition.name }))
-}

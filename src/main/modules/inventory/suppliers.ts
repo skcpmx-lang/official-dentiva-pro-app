@@ -91,11 +91,6 @@ export function getSupplier(ctx: ServiceContext, id: number): SupplierRecord {
   return mapSupplier(row)
 }
 
-export function getSupplierSafe(ctx: ServiceContext, id: number): SupplierRecord | null {
-  const row = ctx.db.prepare(`${SELECT_SUPPLIER} WHERE s.id = ? AND s.is_deleted = 0`).get(id) as SupplierRow | undefined
-  return row ? mapSupplier(row) : null
-}
-
 export function saveSupplier(ctx: ServiceContext, input: SupplierInput): SupplierRecord {
   assertPermission(ctx, 'suppliers.manage')
   const fold = foldForSearch(input.name)

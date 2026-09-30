@@ -1,0 +1,90 @@
+name: CI — Windows
+
+# Windows is the only supported platform, so everything that depends on it is proven here: the native
+# module compiled against Electron, the end-to-end workflows against a real built application, printing
+# and PDF generation, and the installer itself.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows build, end-to-end and installer
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    env:
+      # End-to-end runs use a scratch data directory and never touch a real clinic database.
+      DENTIVA_DATA_DIR: ${{ github.workspace }}\.e2e-data
+      DENTIVA_TEST_ACTIVATION_CODE: '0000000000000000'
+      ELECTRON_ENABLE_LOGGING: '1'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and lint
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Tests against the Node runtime
+        run: npm test
+
+      - name: Build the application bundle
+        run: npm run build
+
+      - name: Build the build identity file
+        run: npm run build:info
+
+      - name: Rebuild the native module for Electron
+        run: npm run rebuild:electron
+
+      - name: End-to-end workflows (Playwright, packaged application)
+        run: npm run test:e2e
+
+      - name: Upload end-to-end report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-e2e-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Build the NSIS installer
+        run: npm run dist:win
+
+      - name: Checksums for the installer
+        run: npm run release:checksums
+
+      - name: Upload the installer and its checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: dentiva-pro-windows-installer
+          path: |
+            release/*.exe
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

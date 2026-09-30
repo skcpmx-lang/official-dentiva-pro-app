@@ -48,11 +48,7 @@ export function isAllowedWhileLocked(channelId: string): boolean {
   return (LOCKED_ALLOWED_CHANNELS as readonly string[]).includes(channelId)
 }
 
-export const zId = z.number().int().positive()
-export const zOptionalId = z.number().int().positive().nullish()
 export const zLocalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a date in YYYY-MM-DD format')
-export const zLocalTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected a time in HH:mm format')
-export const zDateTime = z.string().min(10).max(32)
 export const zTrimmed = (min: number, max: number, label = 'This field') =>
   z
     .string()
@@ -60,22 +56,6 @@ export const zTrimmed = (min: number, max: number, label = 'This field') =>
     .refine((value) => value.length >= min, { message: `${label} must be at least ${min} character(s).` })
     .refine((value) => value.length <= max, { message: `${label} must be at most ${max} character(s).` })
 export const zOptionalText = (max = 4000) => z.string().max(max).nullish().transform((value) => (value === undefined ? null : value))
-export const zMoneyMicro = z.number().int().min(-999_999_999_999).max(999_999_999_999)
-export const zQuantity = z.number().positive().max(100_000)
-export const zPage = z.object({
-  limit: z.number().int().min(1).max(500).default(50),
-  offset: z.number().int().min(0).default(0)
-})
-
-export interface Page<T> {
-  items: T[]
-  total: number
-  limit: number
-  offset: number
-}
-
-export const zSortDir = z.enum(['asc', 'desc'])
-
 /** Result of an export that writes a file chosen by the operator through a native dialog. */
 export const zExportResult = z.object({ path: z.string().nullable(), rowCount: z.number().int().min(0) })
 

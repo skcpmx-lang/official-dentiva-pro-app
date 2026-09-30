@@ -4,12 +4,11 @@ import { conflictError, notFoundError, stateError, validationError } from '@shar
 import { foldForSearch } from '@shared/bengali'
 import { toLocalDate } from '@shared/datetime'
 import { nextCode } from '../../db/counters'
-import { isInboundMovement, type zBatchInput, type zInventoryItemInput, type zInventoryFilter, type zMovementInput } from '@shared/contracts'
+import {isInboundMovement, type zInventoryItemInput, type zInventoryFilter, type zMovementInput } from '@shared/contracts'
 import { z } from 'zod'
 
 export type InventoryItemInput = z.infer<typeof zInventoryItemInput>
 export type InventoryFilter = z.infer<typeof zInventoryFilter>
-export type BatchInput = z.infer<typeof zBatchInput>
 export type MovementInput = z.infer<typeof zMovementInput>
 
 export interface InventoryItemRecord {
@@ -331,19 +330,6 @@ export function archiveItem(ctx: ServiceContext, input: { id: number, reason: st
 }
 
 /* ---------------------------------------------------------------------- batches */
-
-export function loadBatch(ctx: ServiceContext, id: number): BatchRecord {
-  const row = ctx.db
-    .prepare(
-      `SELECT b.id, b.item_id, b.batch_no, b.expiry_date, b.quantity, b.unit_cost_micro, b.supplier_id, b.received_at, b.note
-         FROM inventory_batches b WHERE b.id = ?`
-    )
-    .get(id) as
-    | { id: number, item_id: number, batch_no: string | null, expiry_date: string | null, quantity: number, unit_cost_micro: number, supplier_id: number | null, received_at: number, note: string | null }
-    | undefined
-  if (!row) throw notFoundError('batch', id)
-  return mapBatch(row)
-}
 
 interface BatchRow {
   id: number

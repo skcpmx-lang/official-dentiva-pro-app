@@ -2,7 +2,6 @@ import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
 import { AppError, notFoundError, validationError } from '@shared/errors'
 import { SETTING_DEFS, SETTING_DEFAULTS, displaySettings, isKnownSetting, settingDef } from './defaults'
-import { isValidLocalDate } from '@shared/datetime'
 import { sanitizePrefix } from '@shared/identifiers'
 import { normalizeBengali } from '@shared/bengali'
 
@@ -75,16 +74,6 @@ export function getNumberSetting(ctx: ServiceContext, key: string): number {
 
 export function getBooleanSetting(ctx: ServiceContext, key: string): boolean {
   return getSettingSafe(ctx, key) === 'true'
-}
-
-export function getJsonSetting<T>(ctx: ServiceContext, key: string, fallback: T): T {
-  const raw = getSettingSafe(ctx, key)
-  if (!raw) return fallback
-  try {
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
 }
 
 function validateSettingValue(key: string, value: string): string {
@@ -312,22 +301,6 @@ export function updateClinicProfile(ctx: ServiceContext, input: ClinicProfileInp
 
   ctx.audit.write({ module: 'settings', action: 'clinic.update', entityType: 'clinic', entityId: 1, summary: 'Clinic profile updated' })
   return getClinicProfile(ctx)
-}
-
-/** Guard used by features that require a completed setup (e.g. printing headers). */
-export function assertClinicReady(ctx: ServiceContext): ClinicProfile {
-  const profile = getClinicProfile(ctx)
-  if (!profile.name.trim()) {
-    throw new AppError('E_STATE', 'Complete the clinic setup wizard before continuing.', { detail: { step: 'setup' } })
-  }
-  return profile
-}
-
-export function isWorkingDay(ctx: ServiceContext, date: string): boolean {
-  if (!isValidLocalDate(date)) throw validationError('Invalid date supplied for working-day check.')
-  const profile = getClinicProfile(ctx)
-  const weekday = new Date(`${date}T00:00:00`).getDay()
-  return !profile.weeklyClosedDays.includes(weekday)
 }
 
 export { SETTING_DEFS }

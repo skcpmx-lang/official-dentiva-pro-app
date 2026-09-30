@@ -65,11 +65,6 @@ export function useFormatters(): Formatters {
   )
 }
 
-/** Non-hook variants for use inside printing/export helpers and non-component code. */
-export function formatDateWith(format: DateFormat, ms: number | null | undefined): string {
-  return ms === null || ms === undefined ? DASH : formatDateShared(ms, format)
-}
-
 export const INVOICE_STATUS_META: Record<string, { label: string, tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
   unpaid: { label: 'Unpaid', tone: 'danger' },
   partial: { label: 'Partially paid', tone: 'warning' },
@@ -243,10 +238,6 @@ export function formatTime(ms: number | null | undefined): string {
   return ms === null || ms === undefined ? DASH : formatTimeShared(ms, currentTimeFormat())
 }
 
-export function formatRelativeTime(ms: number): string {
-  return formatRelative(ms)
-}
-
 /** Byte counts for backups, attachments and the database file. */
 export function formatBytes(bytes: number | null | undefined): string {
   if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return DASH
@@ -285,4 +276,3 @@ export function anyMethodLabel(value: string): string {
 
 /** Dentiva Pro records money in Bangladeshi Taka only. */
 export const CURRENCY_CODE = 'BDT'
-export const CURRENCY_SYMBOL = '\u09F3'

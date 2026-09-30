@@ -354,8 +354,3 @@ export function dailyCollections(ctx: ServiceContext, from: string, to: string):
   return rows.map((row) => ({ date: row.date, receivedMicro: row.received, refundedMicro: row.refunded, payments: row.payments }))
 }
 
-/** Totals for one invoice, exposed so the invoice screen and tests share one computation. */
-export function invoiceBalance(ctx: ServiceContext, invoiceId: number): { paidMicro: number, refundedMicro: number, dueMicro: number } {
-  const invoice = getInvoice(ctx, invoiceId)
-  return { paidMicro: invoice.paidMicro, refundedMicro: invoice.refundedMicro, dueMicro: invoice.dueMicro }
-}

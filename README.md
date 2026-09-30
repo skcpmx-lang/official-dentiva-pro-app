@@ -1,5 +1,7 @@
 # Dentiva Pro
 
+<img src="build/icons/icon-256.png" alt="Dentiva Pro application icon" width="96" align="right" />
+
 **Offline Windows dental clinic management software** — patients, appointments, queue, clinical visits,
 dental charting, treatments, prescriptions, invoicing, payments, inventory, accounting, reporting,
 staff & permissions, audit, backup/restore and paper-aware printing (A4/A5/thermal) with PDF.
@@ -21,6 +23,15 @@ npm run test:e2e            # Playwright Electron end-to-end workflows (after np
 npm run build               # production bundles
 npm run dist:win            # Windows NSIS installer → release/   (Windows)
 ```
+
+Repository checks (all run by `ci.yml`): `npm run audit:placeholders` (no unfinished work in `src/`),
+`npm run audit:offline` (nothing in the application can reach the network),
+`npm run audit:deps:check` (licences, and `THIRD_PARTY_NOTICES.md` is current),
+`npm run audit:deadcode` (no declaration nothing references) and `npm run icons:check` (the committed
+application icon matches its source artwork). `npm run icons` and `npm run audit:deps` regenerate those
+artifacts, `npm run build:info` records the build identity, `npm run release:checksums` writes
+`SHA256SUMS.txt` for `release/`, and `npm run stress:seed` builds the performance-testing dataset
+(see `docs/TEST_PLAN.md`).
 
 Testers can point the app at a scratch data directory (never touches clinic data):
 

@@ -14,8 +14,6 @@ export const NOTIFICATION_TYPES = {
   backupDue: 'backup.due'
 } as const
 
-export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES]
-
 export const NOTIFICATION_TYPE_VALUES: readonly string[] = Object.values(NOTIFICATION_TYPES)
 
 export interface NotificationTypeDef {

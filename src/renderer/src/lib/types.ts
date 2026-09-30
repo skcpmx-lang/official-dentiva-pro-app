@@ -27,7 +27,6 @@ export type Role = ChannelOutput<'roles.list'>[number]
 export type RoleInput = InputOf<'roles.save'>
 export type RolePermissionDef = ChannelOutput<'roles.permissions'>[number]
 export type SettingDef = ChannelOutput<'settings.defs'>[number]
-export type PreferenceMap = ChannelOutput<'preferences.get'>
 export type RecentEntry = ChannelOutput<'preferences.recent'>[number]
 export type AuditEntry = ChannelOutput<'audit.list'>['entries'][number]
 export type AuditFilterInput = InputOf<'audit.list'>
@@ -35,17 +34,13 @@ export type Patient = ChannelOutput<'patients.list'>['items'][number]
 export type PatientFilterInput = InputOf<'patients.list'>
 export type PatientInput = InputOf<'patients.save'>
 export type PatientSummary = ChannelOutput<'patients.summary'>
-export type PatientFinancials = ChannelOutput<'patients.financials'>
 export type TimelineEntry = ChannelOutput<'patients.timeline'>['items'][number]
 export type PatientAttachment = ChannelOutput<'attachments.list'>[number]
 export type Referral = ChannelOutput<'referrals.list'>[number]
 export type ReferralInput = InputOf<'referrals.save'>
 export type DashboardSummary = ChannelOutput<'dashboard.summary'>
-export type QueueCounters = ChannelOutput<'dashboard.queue'>
 export type AboutInfo = ChannelOutput<'app.about'>
 export type DiagnosticsReport = ChannelOutput<'app.diagnostics'>
-export type EnvironmentInfo = ChannelOutput<'app.environment'>
-export type ActionResult = ChannelOutput<'auth.logout'>
 export type LoginResult = ChannelOutput<'auth.login'>
 
 /** Date-range presets accepted by the shared range schemas (mirrors `zRangePreset`). */
@@ -57,16 +52,13 @@ export type Treatment = ChannelOutput<'treatments.list'>[number]
 export type TreatmentInput = InputOf<'treatments.save'>
 export type VisitSummary = ChannelOutput<'visits.get'>
 export type VisitListItem = ChannelOutput<'visits.list'>['items'][number]
-export type VisitFilterInput = InputOf<'visits.list'>
 export type VisitInput = InputOf<'visits.save'>
 export type VisitTreatmentInput = InputOf<'visits.treatments.add'>
 export type VisitTreatment = VisitSummary['treatments'][number]
-export type VisitFinding = VisitSummary['findings'][number]
 export type VisitStatus = VisitSummary['status']
 
 export type ChartView = ChannelOutput<'chart.get'>
 export type ChartEntry = ChartView['entries'][number]
-export type ChartCondition = ChartView['conditions'][number]
 export type ChartEntryInput = InputOf<'chart.setEntry'>
 
 export type Prescription = ChannelOutput<'prescriptions.get'>
@@ -81,11 +73,8 @@ export type MedicineHistoryEntry = ChannelOutput<'prescriptions.medicines'>[numb
 
 export type Appointment = ChannelOutput<'appointments.list'>['items'][number]
 export type AppointmentInput = InputOf<'appointments.save'>
-export type AppointmentFilterInput = InputOf<'appointments.list'>
-export type AppointmentDay = ChannelOutput<'appointments.day'>
 export type AppointmentStatus = Appointment['status']
 export type QueueEntry = ChannelOutput<'queue.board'>['items'][number]
-export type QueueBoard = ChannelOutput<'queue.board'>
 export type QueueStatus = QueueEntry['status']
 
 /* ------------------------------------------------------------------- billing */
@@ -94,16 +83,11 @@ export type Invoice = ChannelOutput<'invoices.get'>
 export type InvoiceListItem = ChannelOutput<'invoices.list'>['items'][number]
 export type InvoiceInput = InputOf<'invoices.save'>
 export type InvoiceLineInput = InputOf<'invoices.save'>['lines'][number]
-export type InvoiceFilterInput = InputOf<'invoices.list'>
-export type BillableLine = ChannelOutput<'invoices.billable'>[number]
 export type Payment = ChannelOutput<'payments.list'>['items'][number]
 export type PaymentInput = InputOf<'payments.add'>
-export type PaymentFilterInput = InputOf<'payments.list'>
-
 /* ----------------------------------------------------------------- inventory */
 
 export type InventoryItem = ChannelOutput<'inventory.get'>['item']
-export type InventoryListItem = ChannelOutput<'inventory.list'>['items'][number]
 export type InventoryItemInput = InputOf<'inventory.save'>
 export type InventoryCategory = InventoryItemInput['category']
 export type InventoryDetail = ChannelOutput<'inventory.get'>
@@ -111,7 +95,6 @@ export type InventoryBatch = InventoryDetail['batches'][number]
 export type StockMovement = InventoryDetail['movements'][number]
 export type MovementInput = InputOf<'inventory.movement.add'>
 export type MovementType = MovementInput['movementType']
-export type InventoryFilterInput = InputOf<'inventory.list'>
 export type Supplier = ChannelOutput<'suppliers.list'>[number]
 export type SupplierInput = InputOf<'suppliers.save'>
 export type Purchase = ChannelOutput<'purchases.get'>
@@ -123,9 +106,7 @@ export type PurchaseLineInput = PurchaseInput['lines'][number]
 
 export type AccountingEntry = ChannelOutput<'accounting.entries'>['items'][number]
 export type AccountingEntryInput = InputOf<'accounting.entry.save'>
-export type AccountingEntryFilter = InputOf<'accounting.entries'>
 export type AccountingCategory = ChannelOutput<'accounting.categories'>[number]
-export type AccountingSummary = ChannelOutput<'accounting.summary'>
 export type DayCloseView = ChannelOutput<'accounting.dayClose'>
 export type AccountingKind = AccountingEntry['kind']
 
@@ -164,4 +145,3 @@ export type NotificationCounts = ChannelOutput<'notifications.summary'>
 export type NotificationFilter = 'all' | 'unread' | 'critical' | 'dismissed'
 export type SearchGroup = ChannelOutput<'search.global'>['groups'][number]
 export type SearchResultItem = SearchGroup['items'][number]
-export type SearchGroupKey = SearchGroup['key']

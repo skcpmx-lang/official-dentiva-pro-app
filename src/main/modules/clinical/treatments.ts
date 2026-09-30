@@ -242,16 +242,3 @@ export function treatmentCategories(ctx: ServiceContext): Array<{ category: stri
     .all() as Array<{ category: string, count: number }>
 }
 
-/** Prices are copied onto visit treatments and invoice lines; see `visits.ts` and `billing.ts`. */
-export function treatmentPriceMicro(ctx: ServiceContext, treatmentId: number): number {
-  const row = ctx.db.prepare('SELECT default_price_micro FROM treatments WHERE id = ? AND is_deleted = 0').get(treatmentId) as
-    | { default_price_micro: number }
-    | undefined
-  if (!row) throw notFoundError('treatment', treatmentId)
-  return row.default_price_micro
-}
-
-export function countTreatments(ctx: ServiceContext): number {
-  const row = ctx.db.prepare('SELECT COUNT(*) AS count FROM treatments WHERE is_deleted = 0').get() as { count: number }
-  return row.count
-}
