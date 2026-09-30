@@ -4,6 +4,7 @@ import { Unlock } from 'lucide-react'
 import { Button } from '../../components/ui/primitives'
 import { Field } from '../../components/ui/form'
 import { errorMessage, invoke } from '../../lib/api'
+import { landingRoute } from '../../lib/interface'
 import { clearSessionState, useAppStore } from '../../store/appStore'
 
 /**
@@ -40,7 +41,7 @@ export function LockScreen(): ReactNode {
       setSession(summary)
       setLocked(false)
       setPassword('')
-      navigate('/', { replace: true })
+      navigate(landingRoute(useAppStore.getState().settings), { replace: true })
     } catch (caught) {
       setError(errorMessage(caught))
       setPassword('')

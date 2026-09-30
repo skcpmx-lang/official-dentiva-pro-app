@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createHashRouter, Navigate, Outlet, RouterProvider, useLocation, useNavigate } from 'react-router-dom'
 import { invoke } from './lib/api'
+import { applyInterfaceSettings, startsCollapsed } from './lib/interface'
 import { useAppStore, usePermission } from './store/appStore'
 import { AppShell } from './components/shell/AppShell'
 import { CommandPalette } from './components/shell/CommandPalette'
@@ -38,6 +39,7 @@ import { RolesScreen } from './features/settings/RolesScreen'
 import { PrintingScreen } from './features/settings/PrintingScreen'
 import { PrintHistoryScreen } from './features/printing/PrintHistoryScreen'
 import { BackupScreen } from './features/settings/BackupScreen'
+import { PreferencesScreen } from './features/settings/PreferencesScreen'
 import { NotificationsScreen } from './features/notifications/NotificationsScreen'
 import { AuditScreen } from './features/admin/AuditScreen'
 import { AboutScreen } from './features/admin/AboutScreen'
@@ -57,6 +59,24 @@ export function App(): ReactNode {
   const ready = useAppStore((state) => state.ready)
   const session = useAppStore((state) => state.session)
   const locked = useAppStore((state) => state.locked)
+  const settings = useAppStore((state) => state.settings)
+  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed)
+
+  /* Density and reduced motion are document-level: they are applied here so every screen inherits
+     them, including the sign-in and setup screens that render before the shell exists. */
+  useEffect(() => {
+    applyInterfaceSettings(settings)
+  }, [settings])
+
+  /* “Start with the sidebar collapsed” is a starting position, not a lock: it is applied when the
+     clinic changes the setting and the operator can still toggle the sidebar for the session. */
+  const sidebarSetting = settings['ui.sidebarCollapsed']
+  const appliedSidebar = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (sidebarSetting === undefined || appliedSidebar.current === sidebarSetting) return
+    appliedSidebar.current = sidebarSetting
+    setSidebarCollapsed(startsCollapsed(settings))
+  }, [settings, sidebarSetting, setSidebarCollapsed])
   const router = useMemo(
     () =>
       createHashRouter([
@@ -100,6 +120,7 @@ export function App(): ReactNode {
                 { path: 'settings/roles', element: <PermissionRoute permission="roles.view"><RolesScreen /></PermissionRoute> },
                 { path: 'settings/printing', element: <PermissionRoute permission={['printing.configure', 'printing.print']}><PrintingScreen /></PermissionRoute> },
                 { path: 'settings/backup', element: <PermissionRoute permission={['backups.create', 'backups.restore', 'backups.configure']}><BackupScreen /></PermissionRoute> },
+                { path: 'settings/preferences', element: <PreferencesScreen /> },
                 { path: 'notifications', element: <NotificationsScreen /> },
                 { path: 'printing/history', element: <PermissionRoute permission="printing.print"><PrintHistoryScreen /></PermissionRoute> },
                 { path: 'audit', element: <PermissionRoute permission="audit.view"><AuditScreen /></PermissionRoute> },

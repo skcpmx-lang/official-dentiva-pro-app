@@ -1,5 +1,6 @@
 import { assertPermission } from '../../context'
 import { writeCsv, exportStamp, type CsvColumn } from '../../files/csv'
+import { recordRecentlyViewed } from '../../modules/preferences/service'
 import { formatAmountPlain } from '@shared/money'
 import {
   billableLines,
@@ -55,7 +56,11 @@ export function createBillingHandlers(deps: HandlerDeps): PartialHandlerMap {
     /* ----------------------------------------------------------------- invoices */
 
     'invoices.list': (ctx, input) => listInvoices(ctx, input),
-    'invoices.get': (ctx, input) => getInvoice(ctx, input.id),
+    'invoices.get': (ctx, input) => {
+      const invoice = getInvoice(ctx, input.id)
+      recordRecentlyViewed(ctx, 'invoice', invoice.id)
+      return invoice
+    },
     'invoices.save': (ctx, input) => saveInvoice(ctx, input),
     'invoices.void': (ctx, input) => voidInvoice(ctx, input),
     'invoices.delete': (ctx, input) => deleteInvoice(ctx, input),

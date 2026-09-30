@@ -176,5 +176,17 @@ export const practiceChannels = {
   'roles.delete': channel(z.object({ id: z.number().int().positive(), confirmation: z.string().min(1) }), zActionResult),
 
   'preferences.get': channel(z.object({}).default({}), z.record(z.string(), z.string())),
-  'preferences.set': channel(z.object({ values: z.record(z.string(), z.string()) }), zActionResult)
+  'preferences.set': channel(z.object({ values: z.record(z.string(), z.string()) }), zActionResult),
+  'preferences.recent': channel(
+    z.object({ limit: z.number().int().min(1).max(12).default(8) }),
+    z.array(
+      z.object({
+        kind: z.enum(['patient', 'invoice', 'prescription']),
+        id: z.number().int().positive(),
+        title: z.string(),
+        subtitle: z.string().nullable(),
+        route: z.string()
+      })
+    )
+  )
 } as const

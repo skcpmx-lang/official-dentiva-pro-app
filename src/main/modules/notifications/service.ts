@@ -2,6 +2,8 @@ import type { ServiceContext } from '../../context'
 import { notFoundError } from '@shared/errors'
 import { formatBDT } from '@shared/money'
 import { toLocalDate } from '@shared/datetime'
+import { NOTIFICATION_TYPES, NOTIFICATION_TYPE_VALUES } from '@shared/notifications'
+import { mutedNotificationTypes } from '../preferences/service'
 import { getBooleanSetting, getNumberSetting, getSettingSafe } from '../settings/service'
 import type { Db } from '../../db/connection'
 
@@ -15,17 +17,10 @@ import type { Db } from '../../db/connection'
  * true is retired automatically. Reading or dismissing a notification is remembered.
  */
 
-export const NOTIFICATION_TYPES = {
-  lowStock: 'stock.low',
-  expiringStock: 'stock.expiring',
-  expiredStock: 'stock.expired',
-  overdueInvoice: 'billing.invoice-overdue',
-  missedAppointment: 'appointments.missed',
-  backupDue: 'backup.due'
-} as const
+export { NOTIFICATION_TYPES }
 
 /** Types the live sync owns; a row of one of these types is retired when its condition disappears. */
-const SYNCED_TYPES: string[] = Object.values(NOTIFICATION_TYPES)
+const SYNCED_TYPES: string[] = [...NOTIFICATION_TYPE_VALUES]
 
 const MISSED_APPOINTMENT_WINDOW_DAYS = 14
 const LOW_STOCK_LIMIT = 200
@@ -331,8 +326,26 @@ function permissionClause(ctx: ServiceContext): { sql: string, params: string[] 
   }
 }
 
+/**
+ * Applies the operator's own alert preferences on top of the permission filter. Muting a type hides its
+ * routine entries from the bell and the list, but never hides a critical one: a muted type that turns
+ * critical — expired stock, an overdrawn safety limit — still reaches the operator who asked for quiet.
+ */
+function muteClause(ctx: ServiceContext): { sql: string, params: string[] } {
+  const muted = mutedNotificationTypes(ctx)
+  if (muted.length === 0) return { sql: '(1 = 1)', params: [] }
+  return { sql: `(severity = 'critical' OR type NOT IN (${muted.map(() => '?').join(',')}))`, params: muted }
+}
+
+/** The complete visibility filter for one operator: what they may see, minus what they muted. */
+function visibleClause(ctx: ServiceContext): { sql: string, params: string[] } {
+  const permission = permissionClause(ctx)
+  const mute = muteClause(ctx)
+  return { sql: `(${permission.sql} AND ${mute.sql})`, params: [...permission.params, ...mute.params] }
+}
+
 export function notificationCounts(ctx: ServiceContext): NotificationCounts {
-  const { sql, params } = permissionClause(ctx)
+  const { sql, params } = visibleClause(ctx)
   const row = ctx.db
     .prepare(
       `SELECT COUNT(*) AS total,
@@ -349,7 +362,7 @@ export function listNotifications(
   ctx: ServiceContext,
   filter: { filter: 'all' | 'unread' | 'critical' | 'dismissed', limit: number, offset: number }
 ): { items: NotificationRecord[], total: number, counts: NotificationCounts } {
-  const { sql, params } = permissionClause(ctx)
+  const { sql, params } = visibleClause(ctx)
   const conditions = [sql]
   if (filter.filter === 'unread') conditions.push('is_read = 0', 'is_dismissed = 0')
   else if (filter.filter === 'critical') conditions.push('is_dismissed = 0', "severity IN ('critical','warning')")
@@ -381,7 +394,7 @@ export function listNotifications(
  * belongs to another operator's permission set answers "not found" instead of leaking its existence.
  */
 function loadOwnNotification(ctx: ServiceContext, id: number): NotificationRecord {
-  const { sql, params } = permissionClause(ctx)
+  const { sql, params } = visibleClause(ctx)
   const row = ctx.db
     .prepare(
       `SELECT id, type, severity, title, message, entity_type, entity_id, action_route, requires_permission, created_at,

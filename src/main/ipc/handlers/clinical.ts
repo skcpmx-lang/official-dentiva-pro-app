@@ -11,6 +11,7 @@ import {
   setVisitStatus,
   type VisitSummaryRecord
 } from '../../modules/clinical/visits'
+import { recordRecentlyViewed } from '../../modules/preferences/service'
 import { archiveTreatment, listTreatments, saveTreatment, treatmentCategories } from '../../modules/clinical/treatments'
 import { chartHistory, getChart, listConditions, removeChartEntry, saveCondition, setChartEntry } from '../../modules/clinical/chart'
 import {
@@ -116,7 +117,10 @@ export function createClinicalHandlers(deps: HandlerDeps): PartialHandlerMap {
     /* ----------------------------------------------------------- prescriptions */
 
     'prescriptions.list': (ctx, input) => listPrescriptions(ctx, input),
-    'prescriptions.get': (ctx, input) => getPrescription(ctx, input.id),
+    'prescriptions.get': (ctx, input) => {
+      recordRecentlyViewed(ctx, 'prescription', input.id)
+      return getPrescription(ctx, input.id)
+    },
     'prescriptions.save': (ctx, input) => savePrescription(ctx, input),
     'prescriptions.delete': (ctx, input) => deletePrescription(ctx, input),
     'prescriptions.duplicate': (ctx, input) => duplicatePrescription(ctx, input.id),

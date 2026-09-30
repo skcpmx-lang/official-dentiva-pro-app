@@ -4,7 +4,8 @@ import { KeyRound } from 'lucide-react'
 import { Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
 import { Field } from '../../components/ui/form'
 import { errorMessage, invoke } from '../../lib/api'
-import { useSession, useSetting } from '../../store/appStore'
+import { landingRoute } from '../../lib/interface'
+import { useAppStore, useSession, useSetting } from '../../store/appStore'
 import { toast } from '../../components/ui/overlay'
 import type { ApiError } from '../../lib/api'
 
@@ -33,7 +34,7 @@ export function ChangePasswordScreen(): ReactNode {
     try {
       await invoke('auth.changePassword', { currentPassword, newPassword, confirmPassword })
       toast('success', 'Your password has been changed')
-      navigate('/', { replace: true })
+      navigate(landingRoute(useAppStore.getState().settings), { replace: true })
     } catch (caught) {
       const apiError = caught as ApiError
       if (apiError.fieldErrors) setFieldErrors(apiError.fieldErrors)

@@ -6,7 +6,7 @@ import { listDentists, saveDentist, setDentistActive, archiveDentist, updateDent
 import { listStaff, getStaff, saveStaff, archiveStaff, updateStaffPhoto } from '../../modules/staff/service'
 import { listUsers, getUser, saveUser, setUserActive, resetUserPassword, unlockUser, deleteUser, loginHistory } from '../../modules/users/service'
 import { listRoles, saveRole, deleteRole, permissionCatalog } from '../../modules/roles/service'
-import { getPreferences, setPreferences } from '../../modules/preferences/service'
+import { getPreferences, listRecentlyViewed, setPreferences } from '../../modules/preferences/service'
 import { storeImage, deleteStoredFile, resolveStoredPath } from '../../files/storage'
 import type { PartialHandlerMap } from '../router'
 import type { HandlerDeps } from './system'
@@ -136,7 +136,8 @@ export function createPracticeHandlers(deps: HandlerDeps): PartialHandlerMap {
     'preferences.set': (ctx, input) => {
       setPreferences(ctx, input.values)
       return { ok: true as const }
-    }
+    },
+    'preferences.recent': (ctx, input) => listRecentlyViewed(ctx, input.limit)
   }
 }
 

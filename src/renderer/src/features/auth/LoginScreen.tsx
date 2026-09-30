@@ -4,6 +4,7 @@ import { Lock, User } from 'lucide-react'
 import { Button, Card, CardBody } from '../../components/ui/primitives'
 import { Field, TextInput } from '../../components/ui/form'
 import { errorMessage, invoke } from '../../lib/api'
+import { landingRoute } from '../../lib/interface'
 import { useAppStore } from '../../store/appStore'
 import { applyBootstrap } from '../../App'
 
@@ -62,7 +63,7 @@ export function LoginScreen(): ReactNode {
       if (result.mustChangePassword || result.passwordExpired) {
         navigate('/account/password', { replace: true })
       } else {
-        navigate('/', { replace: true })
+        navigate(landingRoute(useAppStore.getState().settings), { replace: true })
       }
     } catch (caught) {
       setError(errorMessage(caught))

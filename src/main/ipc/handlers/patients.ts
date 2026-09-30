@@ -23,6 +23,7 @@ import {
   updateAttachment,
   uploadAttachment
 } from '../../modules/patients/service'
+import { recordRecentlyViewed } from '../../modules/preferences/service'
 import { formatAmountPlain } from '@shared/money'
 import type { PartialHandlerMap } from '../router'
 import type { HandlerDeps } from './system'
@@ -53,7 +54,11 @@ export function createPatientHandlers(deps: HandlerDeps): PartialHandlerMap {
   return {
     'patients.list': (ctx, input) => listPatients(ctx, input),
 
-    'patients.get': (ctx, input) => getPatient(ctx, input.id),
+    'patients.get': (ctx, input) => {
+      const patient = getPatient(ctx, input.id)
+      recordRecentlyViewed(ctx, 'patient', patient.id)
+      return patient
+    },
 
     'patients.save': (ctx, input) => savePatient(ctx, input),
 
