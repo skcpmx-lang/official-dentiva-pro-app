@@ -99,9 +99,15 @@ const dataDir = process.env.DENTIVA_DATA_DIR ?? join(process.cwd(), '.dentiva-st
 const reset = flag('reset')
 const batch = Number(argument('batch') ?? 500)
 
+/**
+ * True when the directory already holds a clinic database. The database lives in the `data`
+ * subdirectory of the data directory (`AppPaths.databaseFile`), not at its root — checking the root
+ * made both the refusal and `--reset` no-ops, so a second run reused a half-seeded dataset and failed
+ * on the first duplicate patient instead of saying so.
+ */
 function hasData(directory: string): boolean {
   try {
-    return statSync(join(directory, 'dentiva.db')).size > 0
+    return statSync(join(directory, 'data', 'dentiva.db')).size > 0
   } catch {
     return false
   }

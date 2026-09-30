@@ -2,7 +2,7 @@
   "name": "dentiva-pro",
   "productName": "Dentiva Pro",
   "version": "1.0.0",
-  "description": "Dentiva Pro — offline Windows dental clinic management software (patients, clinical records, dental charting, prescriptions, billing, inventory, accounting, printing).",
+  "description": "Dentiva Pro \u2014 offline Windows dental clinic management software (patients, clinical records, dental charting, prescriptions, billing, inventory, accounting, printing).",
   "author": {
     "name": "Shohan Khan",
     "email": "helloiamshohan@gmail.com"
@@ -38,6 +38,7 @@
     "audit:deadcode": "node scripts/audit-deadcode.mjs",
     "audit:security": "node scripts/audit-security.mjs",
     "stress:seed": "tsx --tsconfig tsconfig.node.json scripts/stress-seed.ts",
+    "perf:measure": "tsx --tsconfig tsconfig.node.json scripts/measure-performance.ts",
     "build:info": "node scripts/generate-build-info.mjs",
     "rebuild:electron": "electron-builder install-app-deps",
     "dist:win": "npm run build:info && npm run build && electron-builder --win --config electron-builder.yml --publish never",

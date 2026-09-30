@@ -57,8 +57,6 @@ import type { BootstrapResult, StartupState } from './lib/types'
 
 export function App(): ReactNode {
   const ready = useAppStore((state) => state.ready)
-  const session = useAppStore((state) => state.session)
-  const locked = useAppStore((state) => state.locked)
   const settings = useAppStore((state) => state.settings)
   const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed)
 
@@ -86,7 +84,12 @@ export function App(): ReactNode {
         { path: '/lock', element: <LockScreen /> },
         {
           path: '/',
-          element: <SessionGate />,
+          element: (
+            <>
+              <SessionGate />
+              <ShellChrome />
+            </>
+          ),
           children: [
             {
               element: <AppShell />,
@@ -138,11 +141,25 @@ export function App(): ReactNode {
   return (
     <BootstrapGate>
       {ready ? <RouterProvider router={router} /> : null}
+      {/* The palette navigates, so it must live inside the router: mounted beside `RouterProvider` it
+          throws “useNavigate() may be used only in the context of a <Router> component” the moment a
+          session exists, and React unmounts the whole interface. It is rendered by `ShellChrome`
+          inside the router tree. */}
       <Toaster />
       <ConfirmDialogHost />
-      {session && !locked ? <CommandPalette /> : null}
     </BootstrapGate>
   )
+}
+
+/**
+ * The parts of the interface that need to be *inside* the router: the command palette, which navigates
+ * to the record the operator picked. `Toaster` and `ConfirmDialogHost` render portals and stay outside
+ * with the rest of the application chrome.
+ */
+function ShellChrome(): ReactNode {
+  const session = useAppStore((state) => state.session)
+  const locked = useAppStore((state) => state.locked)
+  return session && !locked ? <CommandPalette /> : null
 }
 
 /** Runs the startup handshake and keeps global state (session, settings, events) up to date. */

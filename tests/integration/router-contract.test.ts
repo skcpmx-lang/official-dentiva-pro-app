@@ -14,6 +14,7 @@ import { createBackupHandlers } from '@main/ipc/handlers/backup'
 import { createNotificationHandlers } from '@main/ipc/handlers/notifications'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import { SessionManager } from '@main/session/sessionManager'
+import { preferencesStepPayload } from '../e2e/support/scenario'
 
 /**
  * The pre-session journey through the real router.
@@ -71,7 +72,8 @@ const WINDOW = 7
 async function call<T>(channel: string, input: unknown = {}): Promise<T> {
   const envelope = await router.handle(WINDOW, channel, input)
   if (!envelope.ok) {
-    throw new Error(`${channel} → ${envelope.error?.code}: ${envelope.error?.message}`)
+    const detail = envelope.error.detail ? ` ${JSON.stringify(envelope.error.detail)}` : ''
+    throw new Error(`${channel} → ${envelope.error.code}: ${envelope.error.message}${detail}`)
   }
   return envelope.data as T
 }
@@ -140,6 +142,18 @@ describe('a brand new installation', () => {
         }
       ]
     })
+    /* The wizard runs before any operator account exists, so it may only use its own channels: the
+     * clinic-wide reads need a session and are refused here — which is exactly what the dentist step
+     * used to call. `setup.summary` is the wizard's own view of everything it has saved so far. */
+    const refusedBeforeAdmin = await router.handle(WINDOW, 'dentists.list', { includeInactive: false })
+    expect(refusedBeforeAdmin.ok).toBe(false)
+    if (refusedBeforeAdmin.ok) throw new Error('a clinic-wide read must need a session')
+    expect(refusedBeforeAdmin.error.code).toBe('E_UNAUTHENTICATED')
+
+    const summaryBeforeAdmin = await call<{ dentists: Array<{ fullName: string }>, clinic: { name: string } }>('setup.summary')
+    expect(summaryBeforeAdmin.clinic.name).toBe('Tangail Dental Care')
+    expect(summaryBeforeAdmin.dentists.map((entry) => entry.fullName)).toContain('Dr. Ayesha Rahman')
+
     await call('setup.administrator', {
       fullName: 'Shohan Khan',
       username: 'admin.dentiva',
@@ -147,7 +161,14 @@ describe('a brand new installation', () => {
       confirmPassword: 'Tangail#2026',
       dentistId: null
     })
-    await call('setup.preferences', { values: {} })
+    const savedPreferences = await call<Record<string, string>>('setup.preferences', preferencesStepPayload())
+    expect(savedPreferences['practice.appointmentDuration']).toBe('30')
+    expect(savedPreferences['print.defaultPaperClass']).toBe('a4')
+    /* Every key the wizard's form offers is a real setting, so nothing is silently dropped. */
+    const storedPreferences = harness.database.db
+      .prepare('SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?, ?, ?, ?, ?)')
+      .all('practice.currency', 'practice.appointmentDuration', 'practice.autoLockMinutes', 'print.defaultPaperClass', 'ui.density', 'ui.landingPage', 'backup.frequencyDays', 'backup.retention') as Array<{ key: string, value: string }>
+    expect(storedPreferences.length).toBe(8)
     await call('setup.complete', { confirmation: 'Tangail Dental Care' })
 
     const beforeLogin = await call<{ stage: string, setup: { needsSetup: boolean, hasClinic: boolean, dentistCount: number, hasAdministrator: boolean } }>('app.bootstrap')

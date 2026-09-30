@@ -1,7 +1,7 @@
 import type { ServiceContext } from '../../context'
 import { getAllSettings, updateSettings, getClinicProfile, updateClinicProfile, getSetting } from '../../modules/settings/service'
 import { SETTING_DEFS, settingGroup } from '../../modules/settings/defaults'
-import { listDentists, saveDentist, setDentistActive, archiveDentist, updateDentistPhoto, dentistsOnDuty } from '../../modules/dentists/service'
+import { dentistForContract, listDentists, saveDentist, setDentistActive, archiveDentist, updateDentistPhoto, dentistsOnDuty } from '../../modules/dentists/service'
 import { listStaff, getStaff, saveStaff, archiveStaff, updateStaffPhoto } from '../../modules/staff/service'
 import {listUsers, saveUser, setUserActive, resetUserPassword, unlockUser, deleteUser, loginHistory } from '../../modules/users/service'
 import { listRoles, saveRole, deleteRole, permissionCatalog } from '../../modules/roles/service'
@@ -17,11 +17,8 @@ import type { HandlerDeps } from './system'
  * between the IPC contract and the domain layer.
  */
 export function createPracticeHandlers(deps: HandlerDeps): PartialHandlerMap {
-  const withDentistShape = (dentist: ReturnType<typeof listDentists>[number]): ReturnType<typeof listDentists>[number] & { designationList: string[], qualificationList: string[] } => ({
-    ...dentist,
-    designationList: dentist.designations,
-    qualificationList: dentist.qualifications.map((qualification) => qualification.title)
-  })
+  /** The contract shape lives with the domain type, so the setup summary returns it too. */
+  const withDentistShape = dentistForContract
 
   const applyLogo = (ctx: ServiceContext, relativePath: string | null): void => {
     ctx.db.prepare('UPDATE clinic SET logo_path = ?, updated_at = ? WHERE id = 1').run(relativePath, ctx.now())

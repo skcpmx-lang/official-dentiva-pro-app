@@ -1,7 +1,7 @@
 import type { ServiceContext } from '../../context'
 import { AppError, stateError, validationError } from '@shared/errors'
 import { applySettings, getClinicProfile, getNumberSetting, readSettings, writeClinicProfile, type ClinicProfileInput } from '../settings/service'
-import { listDentists, upsertDentist, type DentistInput, type DentistRecord } from '../dentists/service'
+import { dentistForContract, listDentists, upsertDentist, type DentistInput, type DentistRecord } from '../dentists/service'
 import { hashPassword, validatePasswordStrength, DEFAULT_POLICY } from '../../auth/password'
 import { expandRolePermissions } from '@shared/permissions'
 import { isActivated } from '../../activation/service'
@@ -140,7 +140,7 @@ export function savePreferencesStep(ctx: ServiceContext, values: Record<string, 
 
 export interface SetupSummary {
   clinic: ReturnType<typeof getClinicProfile>
-  dentists: DentistRecord[]
+  dentists: ReturnType<typeof dentistForContract>[]
   administrator: { fullName: string, username: string }
   preferences: Record<string, string>
   dataDirectory: string
@@ -156,7 +156,10 @@ export function getSetupSummary(ctx: ServiceContext): SetupSummary {
   for (const key of selectedKeys) preferences[key] = settings[key] ?? ''
   return {
     clinic: getClinicProfile(ctx),
-    dentists: dentistRows.map((row) => listDentists(ctx, { includeInactive: true }).find((dentist) => dentist.id === row.id)!).filter(Boolean),
+    dentists: dentistRows
+      .map((row) => listDentists(ctx, { includeInactive: true }).find((dentist) => dentist.id === row.id))
+      .filter((dentist): dentist is DentistRecord => dentist !== undefined)
+      .map(dentistForContract),
     administrator: { fullName: admin?.full_name ?? '', username: admin?.username ?? '' },
     preferences,
     dataDirectory: ctx.host.paths.dataDir,

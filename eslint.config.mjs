@@ -26,7 +26,23 @@ export default tseslint.config(
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
-    rules: { ...reactHooks.configs.recommended.rules }
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      /* The interface is sandboxed: it reaches the main process through the preload bridge and never
+         by importing its modules. The mapping in `tsconfig.web.json` exists only for the flow tests
+         under `tests/renderer`, which deliberately run against the real router. */
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@main/*', '../../main/*', '**/src/main/*'],
+              message: 'The renderer talks to the main process through the preload bridge, never by importing it.'
+            }
+          ]
+        }
+      ]
+    }
   },
   {
     files: ['scripts/**/*.mjs', 'scripts/**/*.ts'],

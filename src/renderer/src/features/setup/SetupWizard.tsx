@@ -391,7 +391,12 @@ function ClinicStep({ onDone }: { onDone(): void }): ReactNode {
 
 function DentistStep({ onDone }: { onDone(): void }): ReactNode {
   const [busy, setBusy] = useState(false)
-  const dentists = useInvoke('dentists.list', { includeInactive: false })
+  /**
+   * The wizard runs before any operator account exists, so it may only use the `setup.*` channels —
+   * the clinic-wide reads (`dentists.list` and friends) need an authenticated session and answer
+   * `E_UNAUTHENTICATED` here. `setup.summary` is the wizard's own view of what it has saved so far.
+   */
+  const dentists = useInvoke('setup.summary', {})
   const [draft, setDraft] = useState({
     fullName: '',
     fullNameBn: '',
@@ -400,6 +405,8 @@ function DentistStep({ onDone }: { onDone(): void }): ReactNode {
     phone: '',
     signatureLabel: ''
   })
+
+  const saved = dentists.data?.dentists ?? []
 
   const add = async (): Promise<void> => {
     const parsed = zDentistInput.safeParse({
@@ -468,14 +475,14 @@ function DentistStep({ onDone }: { onDone(): void }): ReactNode {
           <Button variant="secondary" loading={busy} onClick={() => void add()}>
             Add dentist
           </Button>
-          <Button variant="primary" disabled={(dentists.data ?? []).length === 0} onClick={onDone}>
+          <Button variant="primary" disabled={saved.length === 0} onClick={onDone}>
             Continue
           </Button>
         </div>
 
-        {(dentists.data ?? []).length > 0 ? (
+        {saved.length > 0 ? (
           <ul className="plain-list" style={{ marginTop: 'var(--sp-4)' }}>
-            {dentists.data?.map((dentist) => (
+            {saved.map((dentist) => (
               <li key={dentist.id} className="plain-list__item">
                 <span className="stack" style={{ gap: 2 }}>
                   <strong>{dentist.fullName}</strong>
@@ -610,23 +617,22 @@ function AdministratorStep({ onDone, onBack }: { onDone(): void, onBack(): void 
 
 function PreferencesStep({ onDone, onBack }: { onDone(): void, onBack(): void }): ReactNode {
   const [busy, setBusy] = useState(false)
+  /**
+   * The wizard writes real settings, chosen from the catalogue in `settings/defaults.ts`, and only the
+   * keys it is allowed to touch before an administrator exists (`SETUP_SETTING_KEYS`). It reads nothing:
+   * the clinic-wide settings channel needs a session, and the defaults below are already the right
+   * answers for a Bangladeshi clinic, so the step is a chance to adjust them rather than a form to fill.
+   */
   const [values, setValues] = useState({
-    'clinic.currency': 'BDT',
-    'clinic.defaultConsultationFee': '500',
-    'session.autoLockMinutes': '5',
-    'print.defaultPaper': 'a4',
+    'practice.currency': 'BDT',
+    'practice.appointmentDuration': '30',
+    'practice.autoLockMinutes': '10',
+    'print.defaultPaperClass': 'a4',
     'ui.density': 'comfortable',
-    'ui.language': 'en',
-    'backup.autoEnabled': 'true',
-    'backup.keepCount': '10',
-    'queue.tokenPrefix': 'Q'
+    'ui.landingPage': 'dashboard',
+    'backup.frequencyDays': '7',
+    'backup.retention': '10'
   })
-  const saved = useInvoke('preferences.get', {})
-
-  useEffect(() => {
-    if (!saved.data) return
-    setValues((current) => ({ ...current, ...saved.data }))
-  }, [saved.data])
 
   const submit = async (): Promise<void> => {
     setBusy(true)
@@ -647,41 +653,44 @@ function PreferencesStep({ onDone, onBack }: { onDone(): void, onBack(): void })
       <CardBody>
         <div className="grid grid--2">
           <Field label="Currency" htmlFor="prefCurrency" hint="Dentiva Pro records money in Bangladeshi Taka only.">
-            <TextInput id="prefCurrency" value={values['clinic.currency']} onChange={(value) => setValues({ ...values, 'clinic.currency': value })} maxLength={8} disabled />
+            <TextInput id="prefCurrency" value={values['practice.currency']} onChange={() => undefined} maxLength={8} disabled />
           </Field>
-          <Field label="Default consultation fee (৳)" htmlFor="prefFee" hint="Pre-filled on new visit records.">
+          <Field label="Default appointment length (minutes)" htmlFor="prefDuration" hint="Used when booking a new appointment.">
             <NumberInput
-              id="prefFee"
-              value={Number(values['clinic.defaultConsultationFee'])}
-              onChange={(value) => setValues({ ...values, 'clinic.defaultConsultationFee': String(value ?? 0) })}
-              min={0}
-              step={50}
+              id="prefDuration"
+              value={Number(values['practice.appointmentDuration'])}
+              onChange={(value) => setValues({ ...values, 'practice.appointmentDuration': String(value ?? 30) })}
+              min={5}
+              max={240}
+              step={5}
             />
           </Field>
-          <Field label="Auto-lock after (minutes)" htmlFor="prefLock" hint="The application locks itself after this much inactivity.">
-            <NumberInput
+          <Field label="Auto-lock after inactivity" htmlFor="prefLock" hint="The application locks itself after this much inactivity; 0 disables it.">
+            <select
               id="prefLock"
-              value={Number(values['session.autoLockMinutes'])}
-              onChange={(value) => setValues({ ...values, 'session.autoLockMinutes': String(value ?? 5) })}
-              min={1}
-              max={120}
-            />
+              className="field__input"
+              value={values['practice.autoLockMinutes']}
+              onChange={(event) => setValues({ ...values, 'practice.autoLockMinutes': event.target.value })}
+            >
+              <option value="5">5 minutes</option>
+              <option value="10">10 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="0">Never</option>
+            </select>
           </Field>
-          <Field label="Queue token prefix" htmlFor="prefQueue" hint="Tokens look like A-014.">
-            <TextInput id="prefQueue" value={values['queue.tokenPrefix']} onChange={(value) => setValues({ ...values, 'queue.tokenPrefix': value })} maxLength={3} />
-          </Field>
-          <Field label="Default paper size" htmlFor="prefPaper">
+          <Field label="Default paper size" htmlFor="prefPaper" hint="A4 for the chamber, thermal for the reception desk.">
             <select
               id="prefPaper"
               className="field__input"
-              value={values['print.defaultPaper']}
-              onChange={(event) => setValues({ ...values, 'print.defaultPaper': event.target.value })}
+              value={values['print.defaultPaperClass']}
+              onChange={(event) => setValues({ ...values, 'print.defaultPaperClass': event.target.value })}
             >
               <option value="a4">A4 (210 × 297 mm)</option>
               <option value="a5">A5 (148 × 210 mm)</option>
-              <option value="letter">Letter (216 × 279 mm)</option>
-              <option value="thermal80">Thermal 80 mm</option>
-              <option value="thermal58">Thermal 58 mm</option>
+              <option value="thermal">Thermal roll (58 / 80 mm)</option>
+              <option value="mini">Mini slip</option>
+              <option value="custom">Custom size</option>
             </select>
           </Field>
           <Field label="Interface density" htmlFor="prefDensity">
@@ -695,24 +704,39 @@ function PreferencesStep({ onDone, onBack }: { onDone(): void, onBack(): void })
               <option value="compact">Compact</option>
             </select>
           </Field>
-          <Field label="Automatic backups" htmlFor="prefBackup" hint="A backup is written to the backup folder when the application closes each day.">
+          <Field label="Start page after sign-in" htmlFor="prefLanding">
+            <select
+              id="prefLanding"
+              className="field__input"
+              value={values['ui.landingPage']}
+              onChange={(event) => setValues({ ...values, 'ui.landingPage': event.target.value })}
+            >
+              <option value="dashboard">Dashboard</option>
+              <option value="appointments">Appointments</option>
+              <option value="queue">Queue</option>
+              <option value="patients">Patients</option>
+            </select>
+          </Field>
+          <Field label="Automatic backups" htmlFor="prefBackup" hint="A backup is written to the backup folder when the application closes on a scheduled day.">
             <select
               id="prefBackup"
               className="field__input"
-              value={values['backup.autoEnabled']}
-              onChange={(event) => setValues({ ...values, 'backup.autoEnabled': event.target.value })}
+              value={values['backup.frequencyDays']}
+              onChange={(event) => setValues({ ...values, 'backup.frequencyDays': event.target.value })}
             >
-              <option value="true">Enabled</option>
-              <option value="false">Disabled</option>
+              <option value="7">Every 7 days</option>
+              <option value="15">Every 15 days</option>
+              <option value="30">Every 30 days</option>
+              <option value="0">Disabled</option>
             </select>
           </Field>
-          <Field label="Backups to keep" htmlFor="prefBackupCount" hint="Older automatic backups are rotated after this many copies.">
+          <Field label="Automatic backups to keep" htmlFor="prefBackupCount" hint="Older automatic backups are rotated after this many copies. Manual backups are never removed.">
             <NumberInput
               id="prefBackupCount"
-              value={Number(values['backup.keepCount'])}
-              onChange={(value) => setValues({ ...values, 'backup.keepCount': String(value ?? 10) })}
-              min={2}
-              max={200}
+              value={Number(values['backup.retention'])}
+              onChange={(value) => setValues({ ...values, 'backup.retention': String(value ?? 10) })}
+              min={1}
+              max={100}
             />
           </Field>
         </div>

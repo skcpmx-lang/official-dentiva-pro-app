@@ -92,8 +92,25 @@ export function administratorStepPayload(): Record<string, unknown> {
   }
 }
 
-export function preferencesStepPayload(): Record<string, unknown> {
-  return { values: {} }
+/**
+ * The wizard's preferences step, with the values its form starts from. Every key is a real entry in
+ * the settings catalogue and is written the moment the operator presses *Save and review*; the
+ * service drops unknown keys silently, so a step that invented its own names would save nothing.
+ */
+export function preferencesStepPayload(overrides: Record<string, string> = {}): Record<string, unknown> {
+  return {
+    values: {
+      'practice.currency': 'BDT',
+      'practice.appointmentDuration': '30',
+      'practice.autoLockMinutes': '10',
+      'print.defaultPaperClass': 'a4',
+      'ui.density': 'comfortable',
+      'ui.landingPage': 'dashboard',
+      'backup.frequencyDays': '7',
+      'backup.retention': '10',
+      ...overrides
+    }
+  }
 }
 
 /**

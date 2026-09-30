@@ -45,6 +45,55 @@ import {
 
 export { ADMIN, CLINIC, DENTIST, E2E_ACTIVATION_CODE }
 
+/**
+ * Everything the renderer complained about, per page.
+ *
+ * A workflow that times out waiting for the workspace is the hardest kind of failure to read from an
+ * annotation: the click happened, but was the sign-in refused, did the screen show an error, did React
+ * throw? Playwright's own report holds a screenshot, this holds the words — the console errors and the
+ * uncaught exceptions — and both the assertion message and the thrown error quote them.
+ */
+const rendererProblems = new Map<Page, string[]>()
+
+export function watchRenderer(page: Page): void {
+  if (rendererProblems.has(page)) return
+  const entries: string[] = []
+  rendererProblems.set(page, entries)
+  page.on('pageerror', (error) => entries.push(`uncaught: ${error.message}`))
+  page.on('console', (message) => {
+    if (message.type() === 'error') entries.push(`console.error: ${message.text().slice(0, 300)}`)
+  })
+}
+
+/** A short, human-readable summary of what the window is showing right now. */
+export async function describeScreen(page: Page, label: string): Promise<string> {
+  const parts: string[] = [label]
+  try {
+    const stage = await Promise.race([
+      bootstrapStage(page),
+      new Promise<string>((resolve) => setTimeout(() => resolve('(no answer)'), 5_000))
+    ])
+    parts.push(`stage=${stage}`)
+  } catch (error) {
+    parts.push(`stage failed: ${(error as Error).message.slice(0, 200)}`)
+  }
+  try {
+    const state = await invoke<{ authenticated: boolean, locked: boolean }>(page, 'session.state')
+    parts.push(`session.state=${JSON.stringify(state)}`)
+  } catch (error) {
+    parts.push(`session.state failed: ${(error as Error).message.slice(0, 200)}`)
+  }
+  try {
+    const text = (await page.locator('body').innerText()).replace(/\s+/g, ' ').trim().slice(0, 700)
+    parts.push(`screen: ${text || '(empty document)'}`)
+  } catch (error) {
+    parts.push(`screen unreadable: ${(error as Error).message.slice(0, 120)}`)
+  }
+  const problems = rendererProblems.get(page) ?? []
+  if (problems.length > 0) parts.push(`renderer: ${problems.slice(-4).join(' | ')}`)
+  return parts.join('\n  ')
+}
+
 export interface Clinic {
   app: ElectronApplication
   page: Page
@@ -93,6 +142,7 @@ export async function launchClinic(options: { dataDir?: string, label?: string }
   })
 
   const page = await app.firstWindow()
+  watchRenderer(page)
   await page.waitForLoadState('domcontentloaded')
   return { app, page, dataDir }
 }
@@ -177,7 +227,13 @@ export async function completeSetupThroughUi(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Add dentist' }).click()
   /* The step only lets the wizard continue once at least one dentist exists. */
   const continueButton = page.getByRole('button', { name: 'Continue', exact: true })
-  await expect(continueButton).toBeEnabled({ timeout: 30_000 })
+  const dentistSaved = await expect(continueButton)
+    .toBeEnabled({ timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!dentistSaved) {
+    throw new Error(`the wizard did not accept the dentist.\n  ${await describeScreen(page, 'on the dentist step')}`)
+  }
   await continueButton.click()
 
   /* 3 · administrator */
@@ -205,7 +261,16 @@ export async function signInThroughUi(page: Page, credentials: { username: strin
   await page.fill('#username', credentials.username)
   await page.fill('#password', credentials.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('heading', { name: 'Good day, welcome back' })).toBeVisible({ timeout: 60_000 })
+
+  const workspace = page.getByRole('heading', { name: 'Good day, welcome back' })
+  const arrived = await workspace
+    .waitFor({ state: 'visible', timeout: 60_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (arrived) return
+
+  // The sign-in did not reach the workspace: report what the window shows instead of a bare timeout.
+  throw new Error(`signing in as "${credentials.username}" did not reach the dashboard.\n  ${await describeScreen(page, 'after clicking Sign in')}`)
 }
 
 /**

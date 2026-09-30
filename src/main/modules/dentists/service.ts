@@ -74,6 +74,19 @@ function loadDentist(ctx: ServiceContext, id: number): DentistRecord | null {
   }
 }
 
+/**
+ * The dentist as the IPC contract describes it (`zDentist`): the record plus the two list fields the
+ * screens render. Two callers need this shape — the dentist channels and the setup wizard's summary —
+ * which is why it lives with the domain type instead of in one handler.
+ */
+export function dentistForContract(dentist: DentistRecord): DentistRecord & { designationList: string[], qualificationList: string[] } {
+  return {
+    ...dentist,
+    designationList: dentist.designations,
+    qualificationList: dentist.qualifications.map((qualification) => qualification.title)
+  }
+}
+
 export function listDentists(ctx: ServiceContext, options: { includeInactive?: boolean } = {}): DentistRecord[] {
   const rows = ctx.db
     .prepare(`SELECT id FROM dentists WHERE is_deleted = 0 ${options.includeInactive ? '' : 'AND is_active = 1'} ORDER BY sort_order, full_name`)

@@ -17,6 +17,16 @@ import type { EventId, EventPayloads } from '@shared/events'
 type Handler<C extends ChannelId> = (payload: ChannelInput<C>) => ChannelOutput<C> | Promise<ChannelOutput<C>>
 
 const handlers = new Map<string, (payload: unknown) => unknown>()
+/**
+ * Optional catch-all, used by tests that wire the interface to the *real* main process — the router,
+ * a real database, the real services — instead of hand-written answers. It lets a screen that reaches
+ * for one more channel than the test listed still be served by the application itself.
+ */
+let fallbackHandler: ((channel: string, payload: unknown) => unknown) | null = null
+
+export function mockFallbackChannel(handler: ((channel: string, payload: unknown) => unknown) | null): void {
+  fallbackHandler = handler
+}
 const listeners = new Map<string, Set<(payload: unknown) => void>>()
 
 export const callLog: Array<{ channel: string, payload: unknown }> = []
@@ -35,6 +45,7 @@ export function resetBridge(): void {
   handlers.clear()
   listeners.clear()
   callLog.length = 0
+  fallbackHandler = null
 }
 
 export function emitEvent<E extends EventId>(event: E, payload: EventPayloads[E]): void {
@@ -44,7 +55,7 @@ export function emitEvent<E extends EventId>(event: E, payload: EventPayloads[E]
 const bridge = {
   invoke: async <C extends ChannelId>(channel: C, payload: ChannelInput<C>): Promise<Envelope<ChannelOutput<C>>> => {
     callLog.push({ channel, payload })
-    const handler = handlers.get(channel)
+    const handler = handlers.get(channel) ?? (fallbackHandler ? (payload: unknown) => fallbackHandler!(channel, payload) : undefined)
     if (!handler) {
       throw new Error(`The renderer test called the unmocked channel “${channel}”. Register it with mockChannel().`)
     }
