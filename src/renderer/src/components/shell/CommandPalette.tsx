@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Boxes, CalendarClock, Cog, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
+import { ArrowRight, BarChart3, Boxes, Calculator, CalendarClock, Cog, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
 import { useAppStore, usePermission } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
 import { invoke } from '../../lib/api'
@@ -90,6 +90,8 @@ export function CommandPalette(): ReactNode {
       { id: 'invoices', label: 'Go to invoices', icon: <Receipt size={16} />, permission: 'billing.view', run: () => navigate('/invoices') },
       { id: 'dues', label: 'Show invoices with dues', icon: <Receipt size={16} />, permission: 'billing.view', run: () => navigate('/invoices?hasDue=1') },
       { id: 'inventory', label: 'Go to inventory', icon: <Boxes size={16} />, permission: 'inventory.view', run: () => navigate('/inventory') },
+      { id: 'accounting', label: 'Go to accounting', icon: <Calculator size={16} />, permission: 'accounting.view', run: () => navigate('/accounting') },
+      { id: 'reports', label: 'Open reports', icon: <BarChart3 size={16} />, permission: 'reports.view', run: () => navigate('/reports') },
       { id: 'suppliers', label: 'Go to suppliers and purchases', icon: <Truck size={16} />, permission: 'suppliers.view', run: () => navigate('/inventory/suppliers') },
       { id: 'users', label: 'Go to users', icon: <UserCog size={16} />, permission: 'users.view', run: () => navigate('/settings/users') },
       { id: 'settings', label: 'Go to settings', icon: <Cog size={16} />, permission: 'settings.view', run: () => navigate('/settings') },

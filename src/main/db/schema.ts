@@ -766,6 +766,23 @@ CREATE TABLE IF NOT EXISTS accounting_entries (
   created_at     INTEGER NOT NULL,
   updated_at     INTEGER NOT NULL
 );
+-- A closed day records the physical cash count against what the ledger says should be there.
+-- Reopening keeps the row (with who and why) instead of deleting history.
+CREATE TABLE IF NOT EXISTS day_closes (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  close_date          TEXT NOT NULL UNIQUE,
+  counted_cash_micro  INTEGER NOT NULL DEFAULT 0,
+  expected_cash_micro INTEGER NOT NULL DEFAULT 0,
+  variance_micro      INTEGER NOT NULL DEFAULT 0,
+  note                TEXT,
+  closed_by           INTEGER,
+  closed_at           INTEGER NOT NULL,
+  reopened_at         INTEGER,
+  reopened_by         INTEGER,
+  reopen_reason       TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_day_closes_date ON day_closes(close_date);
+
 CREATE INDEX IF NOT EXISTS idx_accounting_date ON accounting_entries(entry_date, kind, status);
 CREATE INDEX IF NOT EXISTS idx_accounting_cat  ON accounting_entries(category_id, entry_date);
 

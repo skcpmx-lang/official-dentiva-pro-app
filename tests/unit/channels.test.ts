@@ -7,6 +7,7 @@ import { createClinicalHandlers } from '@main/ipc/handlers/clinical'
 import { createSchedulingHandlers } from '@main/ipc/handlers/scheduling'
 import { createBillingHandlers } from '@main/ipc/handlers/billing'
 import { createInventoryHandlers } from '@main/ipc/handlers/inventory'
+import { createAccountingHandlers } from '@main/ipc/handlers/accounting'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
@@ -44,6 +45,7 @@ function collectHandlers(): Set<string> {
     createSchedulingHandlers(deps),
     createBillingHandlers(deps),
     createInventoryHandlers(deps),
+    createAccountingHandlers(deps),
     createDashboardHandlers()
   ]
   const keys = new Set<string>()
@@ -113,6 +115,28 @@ describe('IPC channel registry', () => {
         'appointments.slots'
       ])
     )
+
+    const accounting = Object.keys(CHANNELS).filter((channel) => channel.startsWith('accounting.'))
+    expect(accounting).toEqual(
+      expect.arrayContaining([
+        'accounting.categories',
+        'accounting.categories.save',
+        'accounting.categories.archive',
+        'accounting.entries',
+        'accounting.entry.get',
+        'accounting.entry.save',
+        'accounting.entry.void',
+        'accounting.entries.export',
+        'accounting.summary',
+        'accounting.dayClose',
+        'accounting.closeDay',
+        'accounting.reopenDay',
+        'accounting.days'
+      ])
+    )
+
+    const reports = Object.keys(CHANNELS).filter((channel) => channel.startsWith('reports.'))
+    expect(reports).toEqual(expect.arrayContaining(['reports.catalog', 'reports.run', 'reports.export', 'reports.dailyCollections']))
 
     const inventory = Object.keys(CHANNELS).filter((channel) => channel.startsWith('inventory.'))
     expect(inventory).toEqual(

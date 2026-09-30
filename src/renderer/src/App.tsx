@@ -28,6 +28,8 @@ import { InvoiceScreen } from './features/billing/InvoiceScreen'
 import { InventoryScreen } from './features/inventory/InventoryScreen'
 import { InventoryItemScreen } from './features/inventory/InventoryItemScreen'
 import { SuppliersScreen } from './features/inventory/SuppliersScreen'
+import { AccountingScreen } from './features/accounting/AccountingScreen'
+import { ReportsScreen } from './features/reports/ReportsScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { DentistsScreen } from './features/settings/DentistsScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
@@ -69,6 +71,8 @@ export function App(): ReactNode {
                 { path: 'patients/new', element: <PermissionRoute permission="patients.create"><PatientFormScreen mode="create" /></PermissionRoute> },
                 { path: 'patients/:patientId', element: <PermissionRoute permission="patients.view"><PatientProfileScreen /></PermissionRoute> },
                 { path: 'patients/:patientId/edit', element: <PermissionRoute permission="patients.edit"><PatientFormScreen mode="edit" /></PermissionRoute> },
+                { path: 'accounting', element: <PermissionRoute permission="accounting.view"><AccountingScreen /></PermissionRoute> },
+                { path: 'reports', element: <PermissionRoute permission="reports.view"><ReportsScreen /></PermissionRoute> },
                 { path: 'inventory', element: <PermissionRoute permission="inventory.view"><InventoryScreen /></PermissionRoute> },
                 { path: 'inventory/suppliers', element: <PermissionRoute permission="suppliers.view"><SuppliersScreen /></PermissionRoute> },
                 { path: 'inventory/:itemId', element: <PermissionRoute permission="inventory.view"><InventoryItemScreen /></PermissionRoute> },

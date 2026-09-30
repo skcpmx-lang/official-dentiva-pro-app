@@ -6,6 +6,7 @@ import { clinicalChannels } from './clinical'
 import { schedulingChannels } from './scheduling'
 import { billingChannels } from './billing'
 import { inventoryChannels } from './inventory'
+import { accountingChannels } from './accounting'
 
 /**
  * The complete IPC channel registry. `CHANNELS` is the single source of truth for:
@@ -23,6 +24,7 @@ export const CHANNELS = {
   ...schedulingChannels,
   ...billingChannels,
   ...inventoryChannels,
+  ...accountingChannels,
   ...dashboardChannels
 } as const
 
@@ -38,3 +40,4 @@ export * from './clinical'
 export * from './scheduling'
 export * from './billing'
 export * from './inventory'
+export * from './accounting'

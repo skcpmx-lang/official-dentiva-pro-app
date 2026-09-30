@@ -1,3 +1,4 @@
+import { assertPermission } from '../../context'
 import { writeCsv, exportStamp, type CsvColumn } from '../../files/csv'
 import { formatAmountPlain } from '@shared/money'
 import {
@@ -61,6 +62,7 @@ export function createBillingHandlers(deps: HandlerDeps): PartialHandlerMap {
     'invoices.billable': (ctx, input) => billableLines(ctx, input.visitId),
     'invoices.forVisit': (ctx, input) => invoicesForVisit(ctx, input.visitId),
     'invoices.export': async (ctx, input) => {
+      assertPermission(ctx, 'billing.export')
       const page = listInvoices(ctx, { ...input, limit: 5000, offset: 0 })
       const target = await deps.host.dialogs.saveFile({
         title: 'Export invoices',
@@ -79,6 +81,7 @@ export function createBillingHandlers(deps: HandlerDeps): PartialHandlerMap {
     'payments.add': (ctx, input) => addPayment(ctx, input),
     'payments.void': (ctx, input) => voidPayment(ctx, input),
     'payments.export': async (ctx, input) => {
+      assertPermission(ctx, 'payments.export')
       const page = listPayments(ctx, { ...input, limit: 5000, offset: 0 })
       const target = await deps.host.dialogs.saveFile({
         title: 'Export payments',

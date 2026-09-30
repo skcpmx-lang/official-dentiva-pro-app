@@ -261,6 +261,28 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unit]}`
 }
 
+export const ACCOUNTING_KIND_META: Record<string, { label: string, tone: 'success' | 'warning' }> = {
+  income: { label: 'Income', tone: 'success' },
+  expense: { label: 'Expense', tone: 'warning' }
+}
+
+/** Payment method categories shared by receipts, purchases and accounting entries. */
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  cash: 'Cash',
+  bank: 'Bank transfer',
+  card: 'Card',
+  bkash: 'bKash',
+  nagad: 'Nagad',
+  rocket: 'Rocket',
+  upay: 'Upay',
+  other_wallet: 'Other wallet',
+  other: 'Other'
+}
+
+export function anyMethodLabel(value: string): string {
+  return PAYMENT_METHOD_LABELS[value] ?? value
+}
+
 /** Dentiva Pro records money in Bangladeshi Taka only. */
 export const CURRENCY_CODE = 'BDT'
 export const CURRENCY_SYMBOL = '\u09F3'

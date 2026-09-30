@@ -6,7 +6,9 @@ import {
   CalendarClock,
   Cog,
   ListOrdered,
+  BarChart3,
   Boxes,
+  Calculator,
   Receipt,
   Truck,
   Info,
@@ -74,6 +76,13 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Money',
     entries: [{ to: '/invoices', label: 'Invoices', icon: <Receipt size={18} />, permission: 'billing.view' }]
+  },
+  {
+    title: 'Books',
+    entries: [
+      { to: '/accounting', label: 'Accounting', icon: <Calculator size={18} />, permission: 'accounting.view' },
+      { to: '/reports', label: 'Reports', icon: <BarChart3 size={18} />, permission: 'reports.view' }
+    ]
   },
   {
     title: 'Stock',

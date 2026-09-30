@@ -13,6 +13,7 @@ import { createClinicalHandlers } from './ipc/handlers/clinical'
 import { createSchedulingHandlers } from './ipc/handlers/scheduling'
 import { createBillingHandlers } from './ipc/handlers/billing'
 import { createInventoryHandlers } from './ipc/handlers/inventory'
+import { createAccountingHandlers } from './ipc/handlers/accounting'
 import { verifyActivationIntegrity } from './activation/service'
 import { AppError, describeErrorForLog } from '@shared/errors'
 import type { HostServices } from './platform/types'
@@ -143,6 +144,7 @@ function buildRouter(): IpcRouter {
   instance.register(createSchedulingHandlers(deps))
   instance.register(createBillingHandlers(deps))
   instance.register(createInventoryHandlers(deps))
+  instance.register(createAccountingHandlers(deps))
   instance.register(createDashboardHandlers())
   const missing = instance.missingChannels()
   if (missing.length > 0) {

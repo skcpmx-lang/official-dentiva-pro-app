@@ -114,3 +114,19 @@ export type Purchase = ChannelOutput<'purchases.get'>
 export type PurchaseListItem = ChannelOutput<'purchases.list'>['items'][number]
 export type PurchaseInput = InputOf<'purchases.save'>
 export type PurchaseLineInput = PurchaseInput['lines'][number]
+
+/* --------------------------------------------------------------- accounting */
+
+export type AccountingEntry = ChannelOutput<'accounting.entries'>['items'][number]
+export type AccountingEntryInput = InputOf<'accounting.entry.save'>
+export type AccountingEntryFilter = InputOf<'accounting.entries'>
+export type AccountingCategory = ChannelOutput<'accounting.categories'>[number]
+export type AccountingSummary = ChannelOutput<'accounting.summary'>
+export type DayCloseView = ChannelOutput<'accounting.dayClose'>
+export type AccountingKind = AccountingEntry['kind']
+
+/* ------------------------------------------------------------------ reports */
+
+export type ReportResult = ChannelOutput<'reports.run'>
+export type ReportCatalogEntry = ChannelOutput<'reports.catalog'>[number]
+export type ReportCell = ReportResult['rows'][number][string]

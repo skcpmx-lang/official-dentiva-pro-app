@@ -1,3 +1,4 @@
+import { assertPermission } from '../../context'
 import { writeCsv, exportStamp, type CsvColumn } from '../../files/csv'
 import { formatAmountPlain } from '@shared/money'
 import { archiveItem, batchesForItem, expiringBatches, listItems, lowStockItems, saveItem } from '../../modules/inventory/items'
@@ -61,6 +62,7 @@ export function createInventoryHandlers(deps: HandlerDeps): PartialHandlerMap {
     'inventory.movement.reverse': (ctx, input) => reverseMovement(ctx, input),
     'inventory.movements': (ctx, input) => listMovements(ctx, input),
     'inventory.movements.export': async (ctx, input) => {
+      assertPermission(ctx, 'inventory.view')
       const page = listMovements(ctx, { ...input, limit: 5000, offset: 0 })
       const target = await deps.host.dialogs.saveFile({
         title: 'Export stock movements',
@@ -87,6 +89,7 @@ export function createInventoryHandlers(deps: HandlerDeps): PartialHandlerMap {
     'purchases.save': (ctx, input) => savePurchase(ctx, input),
     'purchases.setPaid': (ctx, input) => setPurchasePaid(ctx, input),
     'purchases.export': async (ctx, input) => {
+      assertPermission(ctx, 'suppliers.view')
       const page = listPurchases(ctx, { ...input, limit: 5000, offset: 0 })
       const target = await deps.host.dialogs.saveFile({
         title: 'Export purchases',
