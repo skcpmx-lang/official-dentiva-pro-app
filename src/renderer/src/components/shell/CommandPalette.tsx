@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarClock, Cog, LayoutDashboard, Lock, LogOut, Pill, ScrollText, Search, Tags, UserCog, Users } from 'lucide-react'
+import { ArrowRight, CalendarClock, Cog, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, ScrollText, Search, Tags, UserCog, Users } from 'lucide-react'
 import { useAppStore, usePermission } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
 import { invoke } from '../../lib/api'
@@ -81,6 +81,8 @@ export function CommandPalette(): ReactNode {
         permission: 'patients.create',
         run: () => navigate('/patients/new')
       },
+      { id: 'appointments', label: 'Go to the appointment book', icon: <CalendarClock size={16} />, permission: 'appointments.view', run: () => navigate('/appointments') },
+      { id: 'queue', label: 'Go to the waiting queue', icon: <ListOrdered size={16} />, permission: 'queue.view', run: () => navigate('/queue') },
       { id: 'visits', label: 'Go to visits', icon: <CalendarClock size={16} />, permission: 'clinical.view', run: () => navigate('/visits') },
       { id: 'prescriptions', label: 'Go to prescriptions', icon: <Pill size={16} />, permission: 'prescriptions.view', run: () => navigate('/prescriptions') },
       { id: 'new-prescription', label: 'Write a new prescription', hint: 'Prescriptions › New', icon: <Pill size={16} />, permission: 'prescriptions.create', run: () => navigate('/prescriptions/new') },

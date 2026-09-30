@@ -4,6 +4,7 @@ import { createSystemHandlers } from '@main/ipc/handlers/system'
 import { createPracticeHandlers } from '@main/ipc/handlers/practice'
 import { createPatientHandlers } from '@main/ipc/handlers/patients'
 import { createClinicalHandlers } from '@main/ipc/handlers/clinical'
+import { createSchedulingHandlers } from '@main/ipc/handlers/scheduling'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
@@ -33,7 +34,14 @@ function stubDeps(): HandlerDeps {
 
 function collectHandlers(): Set<string> {
   const deps = stubDeps()
-  const maps = [createSystemHandlers(deps), createPracticeHandlers(deps), createPatientHandlers(deps), createClinicalHandlers(deps), createDashboardHandlers()]
+  const maps = [
+    createSystemHandlers(deps),
+    createPracticeHandlers(deps),
+    createPatientHandlers(deps),
+    createClinicalHandlers(deps),
+    createSchedulingHandlers(deps),
+    createDashboardHandlers()
+  ]
   const keys = new Set<string>()
   for (const map of maps) {
     for (const key of Object.keys(map)) {
@@ -86,6 +94,24 @@ describe('IPC channel registry', () => {
 
     const chart = Object.keys(CHANNELS).filter((channel) => channel.startsWith('chart.'))
     expect(chart).toEqual(expect.arrayContaining(['chart.get', 'chart.setEntry', 'chart.removeEntry', 'chart.history', 'chart.conditions', 'chart.saveCondition']))
+
+    const appointments = Object.keys(CHANNELS).filter((channel) => channel.startsWith('appointments.'))
+    expect(appointments).toEqual(
+      expect.arrayContaining([
+        'appointments.list',
+        'appointments.day',
+        'appointments.get',
+        'appointments.save',
+        'appointments.setStatus',
+        'appointments.reschedule',
+        'appointments.delete',
+        'appointments.upcoming',
+        'appointments.slots'
+      ])
+    )
+
+    const queue = Object.keys(CHANNELS).filter((channel) => channel.startsWith('queue.'))
+    expect(queue).toEqual(expect.arrayContaining(['queue.board', 'queue.add', 'queue.setStatus', 'queue.remove']))
 
     const prescriptions = Object.keys(CHANNELS).filter((channel) => channel.startsWith('prescriptions.'))
     expect(prescriptions).toEqual(

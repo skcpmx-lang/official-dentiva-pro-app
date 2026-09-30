@@ -5,6 +5,7 @@ import {
   ChevronsRight,
   CalendarClock,
   Cog,
+  ListOrdered,
   Info,
   LayoutDashboard,
   Lock,
@@ -59,7 +60,9 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Clinical',
     entries: [
-      { to: '/visits', label: 'Visits', icon: <CalendarClock size={18} />, permission: 'clinical.view' },
+      { to: '/appointments', label: 'Appointments', icon: <CalendarClock size={18} />, permission: 'appointments.view' },
+      { to: '/queue', label: 'Queue', icon: <ListOrdered size={18} />, permission: 'queue.view', badge: 'queue' },
+      { to: '/visits', label: 'Visits', icon: <Stethoscope size={18} />, permission: 'clinical.view' },
       { to: '/prescriptions', label: 'Prescriptions', icon: <Pill size={18} />, permission: 'prescriptions.view' },
       { to: '/treatments', label: 'Treatments', icon: <Tags size={18} />, permission: 'clinical.view' },
       { to: '/settings/dentists', label: 'Dentists', icon: <Stethoscope size={18} />, permission: 'settings.view' }

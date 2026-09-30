@@ -81,12 +81,10 @@ export const APPOINTMENT_STATUS_META: Record<string, { label: string, tone: 'neu
   scheduled: { label: 'Scheduled', tone: 'info' },
   confirmed: { label: 'Confirmed', tone: 'info' },
   arrived: { label: 'Arrived', tone: 'warning' },
-  in_queue: { label: 'In queue', tone: 'warning' },
-  in_progress: { label: 'In progress', tone: 'brand' as 'info' },
+  in_consultation: { label: 'In consultation', tone: 'warning' },
   completed: { label: 'Completed', tone: 'success' },
   cancelled: { label: 'Cancelled', tone: 'neutral' },
-  no_show: { label: 'No show', tone: 'danger' },
-  rescheduled: { label: 'Rescheduled', tone: 'neutral' }
+  no_show: { label: 'No show', tone: 'danger' }
 }
 
 export const QUEUE_STATUS_META: Record<string, { label: string, tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {

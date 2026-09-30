@@ -1,6 +1,6 @@
 # Dentiva Pro — Completion Status
 
-> Living document. Updated at every checkpoint. Last update: clinical module (visits, chart, treatments, prescriptions).
+> Living document. Updated at every checkpoint. Last update: appointments and waiting queue.
 > Checkpoints are marked ✅ only when their acceptance criteria in
 > `docs/ACCEPTANCE_CRITERIA.md` pass.
 
@@ -17,7 +17,7 @@
 | 6 | Security/Activation/RBAC Complete | ✅ | scrypt password hashing, 8-fragment derived activation verifier, `session/sessionManager.ts` auto-lock with locked-channel allowlist, 67 permission codes enforced in services and in `ipc/router.ts`; `tests/renderer/activation.test.tsx`, `tests/integration/patients.test.ts` (business-layer denial) |
 | 7 | Patient Complete | ✅ | `modules/patients/service.ts` + `features/patients/**`: register, archive/restore, timeline, attachments, referrals, financial roll-ups, CSV export; `tests/integration/patients.test.ts` (7) |
 | 8 | Clinical Complete | ✅ | `modules/clinical/{treatments,visits,chart,prescriptions}.ts` + `ipc/handlers/clinical.ts` (32 channels) + `features/clinical/**` screens; `tests/integration/clinical.test.ts` (15), `tests/renderer/clinical-ui.test.tsx` (5) |
-| 9 | Appointments & Queue Complete | ⏳ | dashboard queue counters implemented; appointments module not started |
+| 9 | Appointments & Queue Complete | ✅ | `src/main/modules/scheduling/{appointments,queue}.ts` + `ipc/handlers/scheduling.ts` (13 channels) + `features/scheduling/**` screens: day book, slot grid, status workflow with reasons, daily queue numbers, queue board with timers; `tests/integration/scheduling.test.ts` (11), `tests/renderer/scheduling-ui.test.tsx` (4) |
 | 10 | Prescription Complete | ⏳ | editor, templates, medicine history and advice library are implemented and tested; print/PDF output is delivered with the printing module |
 | 11 | Billing Complete | ⏳ | |
 | 12 | Inventory Complete | ⏳ | |
@@ -38,9 +38,9 @@
 
 | Suite | Total | Passed | Failed | Skipped | Notes |
 |---|---|---|---|---|---|
-| Unit | 3 | 3 | 0 | 0 | `tests/unit/channels.test.ts` (registry ↔ handler parity, channel naming, clinical namespaces) |
-| Integration | 26 | 26 | 0 | 0 | `database.test.ts` (4), `patients.test.ts` (7), `clinical.test.ts` (15) |
-| Renderer | 13 | 13 | 0 | 0 | `activation.test.tsx` (4), `rbac-ui.test.tsx` (4), `clinical-ui.test.tsx` (5) |
+| Unit | 3 | 3 | 0 | 0 | `tests/unit/channels.test.ts` (registry ↔ handler parity, channel naming, clinical + scheduling namespaces) |
+| Integration | 37 | 37 | 0 | 0 | `database.test.ts` (4), `patients.test.ts` (7), `clinical.test.ts` (15), `scheduling.test.ts` (11) |
+| Renderer | 17 | 17 | 0 | 0 | `activation.test.tsx` (4), `rbac-ui.test.tsx` (4), `clinical-ui.test.tsx` (5), `scheduling-ui.test.tsx` (4) |
 | E2E | – | – | – | – | Playwright workflows run against the packaged Windows build in CI |
 | Stress | – | – | – | – | dataset generators scheduled with checkpoint 20 |
 
@@ -62,7 +62,7 @@
 
 ## Next actions
 
-1. Appointments and queue management (services, channels, screens), then billing (invoices, payments, refunds, dues).
+1. Billing: invoices, payments, refunds and dues (next module).
 2. Inventory/suppliers/expiry, accounting and reports.
 3. Printing engine: paper-aware templates (A4/A5/thermal/custom), preview, printer enumeration, offline PDF — including prescription, invoice and report output.
 4. Backup/restore, notifications, global search, settings/printer profiles, then the audits and the Windows release build from CI.

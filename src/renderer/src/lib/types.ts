@@ -72,3 +72,14 @@ export type Medicine = Prescription['medicines'][number]
 export type MedicineInput = InputOf<'prescriptions.templates.save'>['medicines'][number]
 export type PrescriptionTemplate = ChannelOutput<'prescriptions.templates.list'>[number]
 export type MedicineHistoryEntry = ChannelOutput<'prescriptions.medicines'>[number]
+
+/* ---------------------------------------------------------------- scheduling */
+
+export type Appointment = ChannelOutput<'appointments.list'>['items'][number]
+export type AppointmentInput = InputOf<'appointments.save'>
+export type AppointmentFilterInput = InputOf<'appointments.list'>
+export type AppointmentDay = ChannelOutput<'appointments.day'>
+export type AppointmentStatus = Appointment['status']
+export type QueueEntry = ChannelOutput<'queue.board'>['items'][number]
+export type QueueBoard = ChannelOutput<'queue.board'>
+export type QueueStatus = QueueEntry['status']

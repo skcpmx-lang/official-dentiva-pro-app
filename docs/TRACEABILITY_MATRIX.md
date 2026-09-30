@@ -47,7 +47,7 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | REQ-028 | §31 | Visit module (all clinical fields, billing-independent) | Clinical | `src/main/modules/clinical/visits.ts`, `features/clinical/{VisitListScreen,VisitScreen}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
 | REQ-029 | §32 | Treatment catalog with editable prices | Clinical | `src/main/modules/clinical/treatments.ts`, `features/clinical/TreatmentCatalogScreen.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
 | REQ-030 | §33..§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/clinical/prescriptions.ts`, `features/clinical/{PrescriptionListScreen,PrescriptionScreen}.tsx`; print template pending | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ⏳ |
-| REQ-031 | §66,§67 | Appointments (statuses, views) and queue management | Scheduling | `src/main/modules/appointments/**`, `queue/**` | E2E-05 | ⏳ |
+| REQ-031 | §66,§67 | Appointments (statuses, views) and queue management | Scheduling | `src/main/modules/scheduling/{appointments,queue}.ts`, `features/scheduling/**` | `tests/integration/scheduling.test.ts`, `tests/renderer/scheduling-ui.test.tsx` | ✅ |
 | REQ-032 | §68 | Referrals with follow-up tracking | Clinical | `src/main/modules/patients/service.ts`, `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
 | REQ-033 | §69 | Attachments (upload, preview, open, export, archive) | Files | `src/main/files/attachments.ts`, patient profile attachments tab | `tests/integration/patients.test.ts` | ⏳ |
 
