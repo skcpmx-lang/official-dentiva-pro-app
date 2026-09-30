@@ -28,6 +28,11 @@ const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), in
 export function Modal({ open, title, description, footer, size = 'md', busy, onClose, children, dismissible = true }: ModalProps): ReactNode {
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
+  /* Kept in a ref so the focus/escape effect only runs when the dialog opens or its state changes. A
+     caller that re-renders while the operator types (every keystroke changes state) would otherwise hand
+     the effect a new `onClose` identity, re-run it and steal focus out of the input being typed in. */
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (!open) return
@@ -39,7 +44,7 @@ export function Modal({ open, title, description, footer, size = 'md', busy, onC
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape' && dismissible && !busy) {
         event.preventDefault()
-        onClose()
+        onCloseRef.current()
         return
       }
       if (event.key !== 'Tab' || !container) return
@@ -63,7 +68,7 @@ export function Modal({ open, title, description, footer, size = 'md', busy, onC
       document.body.style.overflow = ''
       previouslyFocused.current?.focus?.()
     }
-  }, [open, dismissible, busy, onClose])
+  }, [open, dismissible, busy])
 
   if (!open) return null
 

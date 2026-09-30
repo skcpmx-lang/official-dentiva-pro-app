@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarCheck, CalendarClock, CalendarPlus, ChevronLeft, ChevronRight, Clock, Pencil, Printer, Trash2, Users } from 'lucide-react'
 import { APPOINTMENT_STATUSES } from '@shared/contracts'
 import { fromLocalDate, toLocalDate } from '@shared/datetime'
@@ -37,7 +38,9 @@ export function AppointmentsScreen(): ReactNode {
   const canDelete = usePermission('appointments.delete')
   const canPrint = usePermission('printing.print')
 
-  const [date, setDate] = useState(today)
+  /* `?date=` makes a search result or a notification open the day it refers to. */
+  const [searchParams] = useSearchParams()
+  const [date, setDate] = useState(searchParams.get('date') ?? today)
   const [dentist, setDentist] = useState('all')
   const [view, setView] = useState<'day' | 'list'>('day')
   const [statusFilter, setStatusFilter] = useState('active')

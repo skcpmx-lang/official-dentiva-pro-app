@@ -4,6 +4,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   CalendarClock,
+  BellRing,
   Cog,
   DatabaseBackup,
   History,
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react'
 import { useAppStore, useClinic, usePermission, useSession } from '../../store/appStore'
 import { Badge, IconButton } from '../ui/primitives'
+import { NotificationBell } from './NotificationBell'
 import { confirmDialog, toast } from '../ui/overlay'
 import { invoke, useInvoke } from '../../lib/api'
 import { useFormatters } from '../../lib/format'
@@ -101,6 +103,7 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/settings/staff', label: 'Staff', icon: <IdCard size={18} />, permission: 'staff.view' },
       { to: '/settings/users', label: 'Users', icon: <UserCog size={18} />, permission: 'users.view' },
       { to: '/settings/roles', label: 'Roles', icon: <UsersRound size={18} />, permission: 'roles.view' },
+      { to: '/notifications', label: 'Notifications', icon: <BellRing size={18} /> },
       { to: '/settings/printing', label: 'Printing', icon: <Printer size={18} />, permission: ['printing.configure', 'printing.print'] },
       { to: '/settings/backup', label: 'Backup & restore', icon: <DatabaseBackup size={18} />, permission: ['backups.create', 'backups.restore', 'backups.configure'] },
       { to: '/printing/history', label: 'Print history', icon: <History size={18} />, permission: 'printing.print' },
@@ -275,6 +278,8 @@ export function AppShell(): ReactNode {
               Queue: <strong className="num">{activeQueue}</strong>
             </NavLink>
           ) : null}
+
+          <NotificationBell />
 
           <IconButton label="Lock the application (Ctrl+L)" icon={<Lock size={18} />} onClick={() => void handleLock()} />
 

@@ -153,3 +153,12 @@ export type ScannedBackup = ChannelOutput<'backups.scan'>['items'][number]
 export type RestoreEntry = ChannelOutput<'backups.restores'>['items'][number]
 export type BackupKind = BackupRecord['kind']
 export type BackupSettingsInput = InputOf<'backups.saveSettings'>
+
+/* ------------------------------------------------------- notifications & search */
+
+export type NotificationItem = ChannelOutput<'notifications.list'>['items'][number]
+export type NotificationCounts = ChannelOutput<'notifications.summary'>
+export type NotificationFilter = 'all' | 'unread' | 'critical' | 'dismissed'
+export type SearchGroup = ChannelOutput<'search.global'>['groups'][number]
+export type SearchResultItem = SearchGroup['items'][number]
+export type SearchGroupKey = SearchGroup['key']

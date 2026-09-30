@@ -1,17 +1,43 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, BarChart3, Boxes, Calculator, CalendarClock, Cog, DatabaseBackup, History, IdCard, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Printer, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
-import { useAppStore, usePermission } from '../../store/appStore'
+import {
+  ArrowRight,
+  BarChart3,
+  Boxes,
+  Calculator,
+  CalendarClock,
+  Cog,
+  DatabaseBackup,
+  History,
+  IdCard,
+  LayoutDashboard,
+  ListOrdered,
+  Lock,
+  LogOut,
+  Pill,
+  Printer,
+  Receipt,
+  ScrollText,
+  Search,
+  Tags,
+  Truck,
+  UserCog,
+  Users
+} from 'lucide-react'
+import { useAppStore } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
-import { invoke } from '../../lib/api'
+import { invoke, useInvoke } from '../../lib/api'
 import { clearSessionState } from '../../store/appStore'
+import type { SearchGroup } from '../../lib/types'
 
 /**
- * Command palette (Ctrl+K).
+ * Command palette and global search (Ctrl+K).
  *
- * Every entry performs a real action: navigating to a screen the operator is allowed to open, or
- * locking / signing out of the application. Entries are filtered by permission, so the palette never
- * offers something that would be refused.
+ * With an empty box it offers actions: navigating to a screen the operator may open, locking, signing
+ * out. As soon as something is typed it searches the clinic — patients, appointments, invoices, payments,
+ * prescriptions, visits, treatments, stock, suppliers, staff and the ledger — and groups the results the
+ * way a receptionist thinks about them. Groups the operator may not open are never returned by the main
+ * process, so nothing here can offer a record that would be refused.
  */
 
 interface Command {
@@ -23,18 +49,27 @@ interface Command {
   run(): void | Promise<void>
 }
 
+interface Row {
+  key: string
+  kind: 'group' | 'result' | 'command'
+  label: string
+  meta?: string | null
+  groupLabel?: string
+  icon?: ReactNode
+  act?(): void | Promise<void>
+}
+
+const DEBOUNCE_MS = 220
+
 export function CommandPalette(): ReactNode {
   const open = useAppStore((state) => state.commandPaletteOpen)
   const setOpen = useAppStore((state) => state.setCommandPaletteOpen)
+  const permissions = useAppStore((state) => state.session?.permissions ?? [])
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const [debounced, setDebounced] = useState('')
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const canViewPatients = usePermission('patients.view')
-  const canViewUsers = usePermission('users.view')
-  const canViewSettings = usePermission('settings.view')
-  const canViewAudit = usePermission('audit.view')
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -58,29 +93,22 @@ export function CommandPalette(): ReactNode {
   useEffect(() => {
     if (open) {
       setQuery('')
+      setDebounced('')
       setActive(0)
       window.setTimeout(() => inputRef.current?.focus(), 20)
     }
   }, [open])
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebounced(query.trim()), DEBOUNCE_MS)
+    return () => window.clearTimeout(handle)
+  }, [query])
+
   const commands = useMemo<Command[]>(() => {
     const list: Command[] = [
       { id: 'dashboard', label: 'Go to dashboard', icon: <LayoutDashboard size={16} />, run: () => navigate('/') },
-      {
-        id: 'patients',
-        label: 'Go to patients',
-        icon: <Users size={16} />,
-        permission: 'patients.view',
-        run: () => navigate('/patients')
-      },
-      {
-        id: 'new-patient',
-        label: 'Register a new patient',
-        hint: 'Patients › New',
-        icon: <Users size={16} />,
-        permission: 'patients.create',
-        run: () => navigate('/patients/new')
-      },
+      { id: 'patients', label: 'Go to patients', icon: <Users size={16} />, permission: 'patients.view', run: () => navigate('/patients') },
+      { id: 'new-patient', label: 'Register a new patient', hint: 'Patients › New', icon: <Users size={16} />, permission: 'patients.create', run: () => navigate('/patients/new') },
       { id: 'appointments', label: 'Go to the appointment book', icon: <CalendarClock size={16} />, permission: 'appointments.view', run: () => navigate('/appointments') },
       { id: 'queue', label: 'Go to the waiting queue', icon: <ListOrdered size={16} />, permission: 'queue.view', run: () => navigate('/queue') },
       { id: 'visits', label: 'Go to visits', icon: <CalendarClock size={16} />, permission: 'clinical.view', run: () => navigate('/visits') },
@@ -96,6 +124,7 @@ export function CommandPalette(): ReactNode {
       { id: 'staff', label: 'Go to staff register', icon: <IdCard size={16} />, permission: 'staff.view', run: () => navigate('/settings/staff') },
       { id: 'users', label: 'Go to users', icon: <UserCog size={16} />, permission: 'users.view', run: () => navigate('/settings/users') },
       { id: 'settings', label: 'Go to settings', icon: <Cog size={16} />, permission: 'settings.view', run: () => navigate('/settings') },
+      { id: 'notifications', label: 'Open the notification centre', icon: <ScrollText size={16} />, run: () => navigate('/notifications') },
       { id: 'printing', label: 'Go to printing settings', icon: <Printer size={16} />, permission: 'printing.configure', run: () => navigate('/settings/printing') },
       { id: 'print-history', label: 'Open the print history', icon: <History size={16} />, permission: 'printing.print', run: () => navigate('/printing/history') },
       { id: 'backup', label: 'Go to backup & restore', icon: <DatabaseBackup size={16} />, permission: 'backups.create', run: () => navigate('/settings/backup') },
@@ -122,35 +151,71 @@ export function CommandPalette(): ReactNode {
         }
       }
     ]
-    return list.filter((command) => {
-      if (!command.permission) return true
-      if (command.permission === 'patients.view') return canViewPatients
-      if (command.permission === 'users.view') return canViewUsers
-      if (command.permission === 'settings.view') return canViewSettings
-      if (command.permission === 'audit.view') return canViewAudit
-      return true
-    })
-  }, [canViewPatients, canViewSettings, canViewUsers, canViewAudit, navigate])
+    /* Filter with the real permission set: a command the operator cannot run is never offered. */
+    return list.filter((command) => !command.permission || permissions.includes(command.permission))
+  }, [navigate, permissions])
 
-  const filtered = useMemo(() => {
+  const commandMatches = useMemo(() => {
     const needle = query.trim().toLowerCase()
     if (!needle) return commands
     return commands.filter((command) => command.label.toLowerCase().includes(needle) || command.hint?.toLowerCase().includes(needle))
   }, [commands, query])
 
+  const searching = debounced.length > 0
+  const search = useInvoke('search.global', { query: debounced, limitPerGroup: 5 }, { enabled: searching })
+
+  const closeAndRun = async (action: () => void | Promise<void>): Promise<void> => {
+    setOpen(false)
+    await action()
+  }
+
+  const rows = useMemo<Row[]>(() => {
+    const list: Row[] = []
+    if (searching && search.data) {
+      for (const group of search.data.groups as SearchGroup[]) {
+        list.push({ key: `group-${group.key}`, kind: 'group', label: group.label })
+        for (const item of group.items) {
+          list.push({
+            key: `result-${group.key}-${item.id}`,
+            kind: 'result',
+            label: item.title,
+            meta: item.meta ?? item.subtitle,
+            groupLabel: group.label,
+            act: () => navigate(item.route)
+          })
+        }
+      }
+    }
+    for (const command of commandMatches) {
+      list.push({ key: `command-${command.id}`, kind: 'command', label: command.label, meta: command.hint ?? null, icon: command.icon, act: () => command.run() })
+    }
+    return list
+  }, [searching, search.data, commandMatches, navigate])
+
+  /* Keyboard navigation walks the actionable rows only; group headings are skipped. */
+  const actionable = useMemo(() => rows.filter((row) => row.kind !== 'group'), [rows])
+  const activeRow = actionable[Math.min(active, Math.max(actionable.length - 1, 0))]
+
+  useEffect(() => {
+    setActive(0)
+  }, [debounced])
+
   if (!open) return null
 
-  const runCommand = async (command: Command): Promise<void> => {
-    setOpen(false)
-    await command.run()
+  const move = (delta: number): void => {
+    if (actionable.length === 0) return
+    setActive((value) => (value + delta + actionable.length) % actionable.length)
   }
+
+  const searchFailed = searching && search.error !== null
+  const nothing = actionable.length === 0 && !search.loading
 
   return (
     <Modal
       open
       size="sm"
       title="Search and commands"
-      description="Type to filter. Press Enter to run the highlighted command."
+      description="Type to search patients, appointments, invoices, stock and more. Enter opens the highlighted row."
       onClose={() => setOpen(false)}
     >
       <div className="field__control" style={{ marginBottom: 'var(--sp-3)' }}>
@@ -166,43 +231,68 @@ export function CommandPalette(): ReactNode {
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown') {
               event.preventDefault()
-              setActive((value) => Math.min(value + 1, filtered.length - 1))
+              move(1)
             } else if (event.key === 'ArrowUp') {
               event.preventDefault()
-              setActive((value) => Math.max(value - 1, 0))
+              move(-1)
             } else if (event.key === 'Enter') {
               event.preventDefault()
-              const command = filtered[active]
-              if (command) void runCommand(command)
+              if (activeRow?.act) void closeAndRun(activeRow.act)
             }
           }}
-          placeholder="What do you want to do?"
-          aria-label="Command"
+          placeholder="Search patients, invoices, stock… or type a command"
+          aria-label="Search the clinic"
+          role="combobox"
+          aria-expanded
+          aria-controls="command-list"
+          aria-activedescendant={activeRow ? `row-${activeRow.key}` : undefined}
         />
       </div>
 
-      <ul className="command-list" role="listbox" aria-label="Commands">
-        {filtered.length === 0 ? (
+      {searching ? (
+        <p className="muted small" style={{ padding: '0 var(--sp-3) var(--sp-2)' }} role="status">
+          {search.loading
+            ? 'Searching…'
+            : searchFailed
+              ? 'Search is unavailable right now. Showing commands instead.'
+              : `${search.data?.total ?? 0} match(es) for “${debounced}”.`}
+        </p>
+      ) : null}
+
+      <ul className="command-list" id="command-list" role="listbox" aria-label="Search results and commands">
+        {nothing ? (
           <li className="muted small" style={{ padding: 'var(--sp-3)' }}>
-            No command matches “{query}”.
+            {searching ? `Nothing matches “${debounced}”.` : 'Type to search, or pick an action.'}
           </li>
         ) : (
-          filtered.map((command, index) => (
-            <li key={command.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index === active}
-                className={`command-list__item${index === active ? ' command-list__item--active' : ''}`}
-                onMouseEnter={() => setActive(index)}
-                onClick={() => void runCommand(command)}
-              >
-                {command.icon}
-                <span className="grow">{command.label}</span>
-                {command.hint ? <span className="muted small">{command.hint}</span> : <ArrowRight size={14} className="muted" />}
-              </button>
-            </li>
-          ))
+          rows.map((row) => {
+            if (row.kind === 'group') {
+              return (
+                <li key={row.key} className="command-list__group" role="presentation">
+                  {row.label}
+                </li>
+              )
+            }
+            const index = actionable.findIndex((entry) => entry.key === row.key)
+            const selected = index === active
+            return (
+              <li key={row.key}>
+                <button
+                  id={`row-${row.key}`}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={`command-list__item${selected ? ' command-list__item--active' : ''}`}
+                  onMouseEnter={() => setActive(index)}
+                  onClick={() => row.act && void closeAndRun(row.act)}
+                >
+                  {row.icon ?? <ArrowRight size={14} className="muted" />}
+                  <span className="grow">{row.label}</span>
+                  {row.meta ? <span className="muted small">{row.meta}</span> : null}
+                </button>
+              </li>
+            )
+          })
         )}
       </ul>
     </Modal>

@@ -2091,3 +2091,88 @@
   background: var(--accent);
   transition: width 0.3s ease;
 }
+
+/* Notifications ---------------------------------------------------------- */
+
+.bell {
+  position: relative;
+  display: inline-flex;
+}
+
+.bell__alert {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.bell__count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: var(--white);
+  font-size: 10px;
+  line-height: 17px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.menu--wide {
+  width: 380px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.menu__empty {
+  display: block;
+  padding: var(--sp-4);
+  margin: 0;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.notification:hover {
+  background: var(--surface-2);
+}
+
+.notification__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.notification-row--muted {
+  opacity: 0.65;
+}
+
+.command-list__group {
+  padding: var(--sp-2) var(--sp-3) 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--slate-500);
+}

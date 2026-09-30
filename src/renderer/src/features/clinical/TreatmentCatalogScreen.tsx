@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Download, FolderArchive, Pencil, Plus, Tags } from 'lucide-react'
 import { zTreatmentInput } from '@shared/contracts'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader, SearchInput, Switch, Toolbar } from '../../components/ui/primitives'
@@ -24,7 +25,9 @@ export function TreatmentCatalogScreen(): ReactNode {
   const canManage = usePermission(['clinical.create', 'clinical.edit'])
   const canArchive = usePermission('clinical.delete')
   const format = useFormatters()
-  const [search, setSearch] = useState('')
+  /* `?search=` lets global search and the command palette open the catalogue on the treatment asked for. */
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [debounced, setDebounced] = useState('')
   const [category, setCategory] = useState('all')
   const [includeInactive, setIncludeInactive] = useState(false)
