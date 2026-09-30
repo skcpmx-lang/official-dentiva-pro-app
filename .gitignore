@@ -1,0 +1,16 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.vite/
+.vitest/
+test-results/
+playwright-report/
+tmp/
+.tmp/
+# local scratch data dirs created by tests/dev
+.dentiva-data/
