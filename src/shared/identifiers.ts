@@ -30,11 +30,11 @@ function twoDigit(value: number): string {
 }
 
 export function periodScope(date: Date): CounterScope {
-  return `${date.getFullYear()}${twoDigit(date.getMonth() + 1)}`
+  return `${twoDigit(date.getFullYear() % 100)}${twoDigit(date.getMonth() + 1)}`
 }
 
 export function dayScope(date: Date): CounterScope {
-  return `${date.getFullYear()}${twoDigit(date.getMonth() + 1)}${twoDigit(date.getDate())}`
+  return `${twoDigit(date.getFullYear() % 100)}${twoDigit(date.getMonth() + 1)}${twoDigit(date.getDate())}`
 }
 
 export function formatIdentifier({ prefix, date, sequence, padLength = 4 }: IdentifierParts): string {

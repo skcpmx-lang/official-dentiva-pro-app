@@ -1,208 +1,186 @@
-import { app, BrowserWindow, dialog, screen, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell, screen } from 'electron'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { randomUUID } from 'node:crypto'
-import { cpus, hostname } from 'node:os'
-import type { AppPaths, BuildInfo, DialogHost, DialogFilter, HostServices, MachineInfo, ShellHost } from './types'
+import { randomUUID, createHash } from 'node:crypto'
+import { hostname, release, totalmem, cpus, arch } from 'node:os'
+import { join, dirname } from 'node:path'
+import type { AppPaths, BuildInfo, HostServices, MachineInfo } from './types'
 import { createLogger } from '../logging/logger'
 import { electronPrintHost } from './electronPrint'
+import { readBuildIdentity } from './buildIdentity'
 
 /**
- * Build the Electron-backed host services. Called once during bootstrap, before any window exists, so
- * that logging and the database are available even when the UI fails to start.
+ * Electron implementation of `HostServices`.
+ *
+ * This is the only place in the main process that talks to Electron itself. It resolves the per-user
+ * data directory (`%APPDATA%\Dentiva Pro`, overridable with `DENTIVA_DATA_DIR` for portable installs
+ * and automated tests), the build identity produced by the release pipeline, the stable per-machine
+ * identifier used by activation and the audit trail, native dialogs and shell integration.
  */
 
-let cachedMachineId: string | null = null
-
-function readTotalMemoryBytes(): number {
-  try {
-    const info = process.getSystemMemoryInfo()
-    return typeof info?.total === 'number' ? info.total * 1024 : 0
-  } catch {
-    return 0
-  }
+export interface ElectronHostOptions {
+  /** Returns the window that owns modal dialogs, when one is open. */
+  getWindow?: () => BrowserWindow | null
+  /** Overrides the data directory (portable runs, tests). */
+  dataDir?: string
 }
 
-function resolveMachineId(dataDir: string): string {
-  if (cachedMachineId) return cachedMachineId
-  const file = join(dataDir, 'machine.id')
-  try {
-    if (existsSync(file)) {
-      const value = readFileSync(file, 'utf8').trim()
-      if (value.length >= 8) {
-        cachedMachineId = value
-        return value
-      }
-    }
-    const generated = randomUUID()
-    writeFileSync(file, generated, 'utf8')
-    cachedMachineId = generated
-    return generated
-  } catch {
-    cachedMachineId = randomUUID()
-    return cachedMachineId
-  }
+export function resolveDataDirectory(explicit?: string): string {
+  if (explicit) return explicit
+  const fromEnvironment = process.env['DENTIVA_DATA_DIR']
+  if (fromEnvironment && fromEnvironment.trim()) return fromEnvironment.trim()
+  return app.getPath('userData')
 }
 
-export function resolveDataDirectory(): string {
-  const override = process.env.DENTIVA_DATA_DIR
-  if (override && override.trim().length > 0) return override
-  const base = app.getPath('userData')
-  return app.isPackaged ? base : `${base} (dev)`
-}
-
-export function buildAppPaths(): AppPaths {
-  const dataDir = resolveDataDirectory()
-  const paths: AppPaths = {
+export function resolvePaths(dataDir: string, appRoot: string, resourcesPath: string): AppPaths {
+  return {
     dataDir,
     databaseFile: join(dataDir, 'data', 'dentiva.db'),
     attachmentsDir: join(dataDir, 'attachments'),
     logsDir: join(dataDir, 'logs'),
     tmpDir: join(dataDir, 'tmp'),
     exportsDir: join(dataDir, 'exports'),
-    defaultBackupDir: process.env.DENTIVA_BACKUP_DIR ?? join(app.getPath('documents'), 'Dentiva Pro Backups'),
-    appRoot: app.getAppPath(),
-    fontsDir: app.isPackaged ? join(process.resourcesPath, 'fonts') : join(app.getAppPath(), 'node_modules', '@fontsource')
+    defaultBackupDir: join(dataDir, 'backups'),
+    appRoot,
+    fontsDir: join(resourcesPath, 'fonts')
   }
-  for (const dir of [dataDir, join(dataDir, 'data'), paths.attachmentsDir, paths.logsDir, paths.tmpDir, paths.exportsDir]) {
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  }
-  return paths
 }
 
-function readBuildInfo(paths: AppPaths): BuildInfo {
-  const fallback: BuildInfo = {
-    version: app.getVersion(),
-    buildNumber: 'dev',
-    gitSha: process.env.DENTIVA_GIT_SHA ?? 'unknown',
-    builtAt: new Date().toISOString(),
-    electron: process.versions.electron ?? 'unknown',
-    chromium: process.versions.chrome ?? 'unknown',
-    node: process.versions.node ?? 'unknown'
-  }
-  const candidates = [join(paths.appRoot, 'build-info.json'), join(app.isPackaged ? process.resourcesPath : paths.appRoot, 'build-info.json')]
-  for (const candidate of candidates) {
-    try {
-      if (!existsSync(candidate)) continue
-      const parsed = JSON.parse(readFileSync(candidate, 'utf8')) as Partial<BuildInfo>
-      return { ...fallback, ...parsed, electron: fallback.electron, chromium: fallback.chromium, node: fallback.node }
-    } catch {
-      /* a corrupt build info file must not stop the application */
-    }
-  }
-  return fallback
-}
-
-function buildMachineInfo(paths: AppPaths): MachineInfo {
-  let displays: Array<{ width: number, height: number, scaleFactor: number }> = []
+/**
+ * Stable installation identifier. Stored as a file inside the clinic data directory so it survives
+ * application updates, and derived from machine characteristics as a fallback when the directory is
+ * temporarily read-only (for example during a restore).
+ */
+function readMachineId(dataDir: string): string {
+  const file = join(dataDir, 'machine.id')
   try {
-    displays = screen.getAllDisplays().map((display) => ({
-      width: display.size.width,
-      height: display.size.height,
-      scaleFactor: display.scaleFactor
-    }))
+    if (existsSync(file)) {
+      const existing = readFileSync(file, 'utf8').trim()
+      if (/^[0-9a-f-]{16,64}$/i.test(existing)) return existing
+    }
+    mkdirSync(dirname(file), { recursive: true })
+    const generated = randomUUID()
+    writeFileSync(file, generated, 'utf8')
+    return generated
   } catch {
-    displays = []
-  }
-  return {
-    hostname: hostname(),
-    platform: process.platform,
-    osVersion: process.getSystemVersion?.() ?? '',
-    arch: process.arch,
-    machineId: resolveMachineId(paths.dataDir),
-    totalMemoryBytes: readTotalMemoryBytes(),
-    cpuCount: Math.max(1, cpus().length),
-    locale: app.getLocale(),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    displays,
-    printersAvailable: false
+    return createHash('sha256').update(`${hostname()}|${release()}|${app.getPath('userData')}`).digest('hex').slice(0, 32)
   }
 }
 
-function createDialogs(getWindow: () => BrowserWindow | null): DialogHost {
-  return {
-    async openFile(options: { title: string, filters?: DialogFilter[], multi?: boolean }): Promise<string[]> {
-      const window = getWindow()
-      const result = window
-        ? await dialog.showOpenDialog(window, { title: options.title, filters: options.filters, properties: options.multi ? ['openFile', 'multiSelections'] : ['openFile'] })
-        : await dialog.showOpenDialog({ title: options.title, filters: options.filters, properties: options.multi ? ['openFile', 'multiSelections'] : ['openFile'] })
-      return result.canceled ? [] : result.filePaths
-    },
-    async openDirectory(options: { title: string, defaultPath?: string }): Promise<string | null> {
-      const window = getWindow()
-      const settings = { title: options.title, properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>, defaultPath: options.defaultPath }
-      const result = window ? await dialog.showOpenDialog(window, settings) : await dialog.showOpenDialog(settings)
-      return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0] ?? null
-    },
-    async saveFile(options: { title: string, defaultPath?: string, filters?: DialogFilter[] }): Promise<string | null> {
-      const window = getWindow()
-      const settings = { title: options.title, defaultPath: options.defaultPath, filters: options.filters }
-      const result = window ? await dialog.showSaveDialog(window, settings) : await dialog.showSaveDialog(settings)
-      return result.canceled || !result.filePath ? null : result.filePath
-    },
-    async confirm(options): Promise<boolean> {
-      const window = getWindow()
-      const settings = {
-        type: options.danger ? ('warning' as const) : ('question' as const),
-        buttons: [options.confirmLabel ?? 'Continue', 'Cancel'],
-        defaultId: 1,
-        cancelId: 1,
-        title: options.title,
-        message: options.message,
-        detail: options.detail
-      }
-      const result = window ? await dialog.showMessageBox(window, settings) : await dialog.showMessageBox(settings)
-      return result.response === 0
-    },
-    async message(options): Promise<void> {
-      const window = getWindow()
-      const settings = { type: options.kind ?? 'info', title: options.title, message: options.message, detail: options.detail, buttons: ['Close'] }
-      if (window) await dialog.showMessageBox(window, settings)
-      else await dialog.showMessageBox(settings)
+export function createElectronHost(options: ElectronHostOptions = {}): HostServices {
+  const isPackaged = app.isPackaged
+  const appRoot = isPackaged ? app.getAppPath() : join(__dirname, '..', '..')
+  const resourcesPath = isPackaged ? process.resourcesPath : join(appRoot, 'resources')
+  const dataDir = resolveDataDirectory(options.dataDir)
+  const paths = resolvePaths(dataDir, appRoot, resourcesPath)
+
+  for (const directory of [paths.dataDir, dirname(paths.databaseFile), paths.logsDir, paths.tmpDir, paths.exportsDir, paths.attachmentsDir]) {
+    try {
+      mkdirSync(directory, { recursive: true })
+    } catch {
+      // Reported through the logger; opening the database produces the operator-facing message.
     }
   }
-}
 
-function createShell(): ShellHost {
-  return {
-    async openPath(target: string): Promise<string> {
-      return shell.openPath(target)
-    },
-    async showItemInFolder(target: string): Promise<void> {
-      shell.showItemInFolder(target)
-    },
-    async openExternal(url: string): Promise<void> {
-      await shell.openExternal(url)
-    },
-    beep(): void {
-      shell.beep()
+  const logger = createLogger({ directory: paths.logsDir, mirrorToConsole: !isPackaged })
+  const build: BuildInfo = readBuildIdentity({ appRoot, isPackaged, resourcesPath })
+
+  const machine = (): MachineInfo => {
+    let displays: Array<{ width: number; height: number, scaleFactor: number }> = []
+    try {
+      displays = screen.getAllDisplays().map((display) => ({
+        width: display.size.width,
+        height: display.size.height,
+        scaleFactor: display.scaleFactor
+      }))
+    } catch {
+      displays = []
+    }
+    return {
+      hostname: hostname(),
+      platform: process.platform,
+      osVersion: `${process.platform} ${release()}`,
+      arch: arch(),
+      machineId: readMachineId(paths.dataDir),
+      totalMemoryBytes: totalmem(),
+      cpuCount: cpus().length,
+      locale: app.getLocale(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'unknown',
+      displays,
+      printersAvailable: displays.length > 0 || process.platform === 'win32'
     }
   }
-}
 
-export interface CreateHostOptions {
-  getWindow: () => BrowserWindow | null
-}
-
-export function createElectronHost(options: CreateHostOptions): HostServices {
-  const paths = buildAppPaths()
-  const logger = createLogger({
-    directory: paths.logsDir,
-    minLevel: app.isPackaged ? 'info' : 'debug',
-    mirrorToConsole: !app.isPackaged
-  })
-  const build = readBuildInfo(paths)
-  const machine = buildMachineInfo(paths)
-  const host: HostServices = {
+  return {
     paths,
     build,
-    machine,
+    machine: machine(),
     logger,
     printing: electronPrintHost({ logger }),
-    dialogs: createDialogs(options.getWindow),
-    shell: createShell(),
+    dialogs: {
+      async openFile(request): Promise<string[]> {
+        const parent = options.getWindow?.()
+        const properties: Array<'openFile' | 'multiSelections'> = ['openFile']
+        if (request.multi) properties.push('multiSelections')
+        const dialogOptions = { title: request.title, filters: request.filters, properties }
+        const result = parent ? await dialog.showOpenDialog(parent, dialogOptions) : await dialog.showOpenDialog(dialogOptions)
+        return result.canceled ? [] : result.filePaths
+      },
+      async openDirectory(request): Promise<string | null> {
+        const parent = options.getWindow?.()
+        const dialogOptions = { title: request.title, defaultPath: request.defaultPath, properties: ['openDirectory' as const, 'createDirectory' as const] }
+        const result = parent ? await dialog.showOpenDialog(parent, dialogOptions) : await dialog.showOpenDialog(dialogOptions)
+        return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]!
+      },
+      async saveFile(request): Promise<string | null> {
+        const parent = options.getWindow?.()
+        const dialogOptions = { title: request.title, defaultPath: request.defaultPath, filters: request.filters }
+        const result = parent ? await dialog.showSaveDialog(parent, dialogOptions) : await dialog.showSaveDialog(dialogOptions)
+        return result.canceled || !result.filePath ? null : result.filePath
+      },
+      async confirm(request): Promise<boolean> {
+        const parent = options.getWindow?.()
+        const dialogOptions = {
+          type: request.danger ? ('warning' as const) : ('question' as const),
+          title: request.title,
+          message: request.message,
+          detail: request.detail,
+          buttons: [request.confirmLabel ?? 'Continue', 'Cancel'],
+          defaultId: 0,
+          cancelId: 1,
+          noLink: true
+        }
+        const result = parent ? await dialog.showMessageBox(parent, dialogOptions) : await dialog.showMessageBox(dialogOptions)
+        return result.response === 0
+      },
+      async message(request): Promise<void> {
+        const parent = options.getWindow?.()
+        const dialogOptions = {
+          type: request.kind ?? ('info' as const),
+          title: request.title,
+          message: request.message,
+          detail: request.detail,
+          buttons: ['OK']
+        }
+        if (parent) await dialog.showMessageBox(parent, dialogOptions)
+        else await dialog.showMessageBox(dialogOptions)
+      }
+    },
+    shell: {
+      async openPath(target: string): Promise<string> {
+        return (await shell.openPath(target)) ?? ''
+      },
+      async showItemInFolder(target: string): Promise<void> {
+        shell.showItemInFolder(target)
+      },
+      async openExternal(url: string): Promise<void> {
+        // Reachable only from the About screen (author links); everything else navigates in-app.
+        if (/^(https?:\/\/|mailto:)/i.test(url)) await shell.openExternal(url)
+      },
+      beep(): void {
+        shell.beep()
+      }
+    },
     now: () => Date.now(),
     isDevelopment: () => !app.isPackaged
   }
-  return host
 }

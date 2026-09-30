@@ -76,6 +76,9 @@ export interface Page<T> {
 
 export const zSortDir = z.enum(['asc', 'desc'])
 
+/** Result of an export that writes a file chosen by the operator through a native dialog. */
+export const zExportResult = z.object({ path: z.string().nullable(), rowCount: z.number().int().min(0) })
+
 export const zRangePreset = z.enum(['today', 'yesterday', 'last7', 'last30', 'last90', 'thisMonth', 'lastYear', 'all', 'custom'])
 
 export const zDateRange = z

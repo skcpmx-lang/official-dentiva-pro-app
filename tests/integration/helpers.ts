@@ -5,6 +5,7 @@ import { openDatabase, type DatabaseContext } from '@main/db/connection'
 import { createNodeHost } from '@main/platform/nodeHost'
 import { createServiceContext, SYSTEM_ACTOR, createTestContext, type ServiceContext } from '@main/context'
 import { activate } from '@main/activation/service'
+import { PERMISSION_CODES } from '@shared/permissions'
 import type { HostServices } from '@main/platform/types'
 
 export interface TestHarness {
@@ -43,10 +44,12 @@ export function createHarness(options: { keepData?: boolean } = {}): TestHarness
     dataDir,
     cleanup,
     ctx(permissions?: string[], actorOverride?: Partial<{ userId: number, username: string }>) {
+      // Omitting the permission list means "this actor holds every permission", which keeps tests
+      // focused on behaviour; passing a list (including an empty one) exercises authorisation.
       return createTestContext({
         db: database.db,
         host,
-        permissions,
+        permissions: permissions ?? [...PERMISSION_CODES],
         actor: actorOverride
       })
     },
@@ -55,8 +58,6 @@ export function createHarness(options: { keepData?: boolean } = {}): TestHarness
     }
   }
 }
-
-export const ALL_PERMISSIONS_HINT = 'use createTestContext without the permissions argument for full access'
 
 /**
  * Activates the test instance through the real activation service.

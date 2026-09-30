@@ -263,6 +263,20 @@ export const zAboutInfo = z.object({
 /* Channel registry                                                           */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/* Exported value-object types                                                */
+/* -------------------------------------------------------------------------- */
+
+export type BuildInfo = z.output<typeof zBuildInfo>
+export type MachineInfo = z.output<typeof zMachineInfo>
+export type SessionSummary = z.output<typeof zSessionSummary>
+export type SessionState = z.output<typeof zSessionState>
+export type AuditEntry = z.output<typeof zAuditEntry>
+export type AuditFilter = z.input<typeof zAuditFilter>
+export type SystemEvent = z.output<typeof zSystemEvent>
+export type Diagnostics = z.output<typeof zDiagnostics>
+export type AboutInfo = z.output<typeof zAboutInfo>
+
 export const systemChannels = {
   'app.bootstrap': channel(
     z.object({}).default({}),

@@ -7,6 +7,7 @@ import { SessionManager } from './session/sessionManager'
 import { IpcRouter } from './ipc/router'
 import { createSystemHandlers, type HandlerDeps } from './ipc/handlers/system'
 import { createPracticeHandlers } from './ipc/handlers/practice'
+import { createPatientHandlers } from './ipc/handlers/patients'
 import { verifyActivationIntegrity } from './activation/service'
 import { AppError, describeErrorForLog } from '@shared/errors'
 import type { HostServices } from './platform/types'
@@ -132,6 +133,7 @@ function buildRouter(): IpcRouter {
   })
   instance.register(createSystemHandlers(deps))
   instance.register(createPracticeHandlers(deps))
+  instance.register(createPatientHandlers(deps))
   const missing = instance.missingChannels()
   if (missing.length > 0) {
     // Failing fast in development keeps the contract honest; production logs and continues with the
