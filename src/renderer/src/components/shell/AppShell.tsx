@@ -11,6 +11,7 @@ import {
   Calculator,
   Receipt,
   Truck,
+  IdCard,
   Info,
   LayoutDashboard,
   Lock,
@@ -94,6 +95,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Administration',
     entries: [
+      { to: '/settings/staff', label: 'Staff', icon: <IdCard size={18} />, permission: 'staff.view' },
       { to: '/settings/users', label: 'Users', icon: <UserCog size={18} />, permission: 'users.view' },
       { to: '/settings/roles', label: 'Roles', icon: <UsersRound size={18} />, permission: 'roles.view' },
       { to: '/audit', label: 'Audit log', icon: <ScrollText size={18} />, permission: 'audit.view' },

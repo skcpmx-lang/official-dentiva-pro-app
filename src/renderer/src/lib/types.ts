@@ -20,6 +20,7 @@ export type Dentist = ChannelOutput<'dentists.list'>[number]
 export type DentistInput = InputOf<'dentists.save'>
 export type Staff = ChannelOutput<'staff.list'>['items'][number]
 export type User = ChannelOutput<'users.list'>[number]
+export type StaffInput = InputOf<'staff.save'>
 export type UserInput = InputOf<'users.save'>
 export type Role = ChannelOutput<'roles.list'>[number]
 export type RoleInput = InputOf<'roles.save'>

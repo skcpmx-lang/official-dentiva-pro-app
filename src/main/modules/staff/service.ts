@@ -59,7 +59,7 @@ const STAFF_SELECT = `
          u.id AS linked_user_id, u.username AS linked_username
     FROM staff s
     LEFT JOIN users u ON u.staff_id = s.id AND u.is_deleted = 0
-   WHERE s.is_deleted = 0`
+   WHERE 1 = 1`
 
 function mapStaff(row: StaffRow): StaffRecord {
   return {
@@ -91,7 +91,8 @@ export function listStaff(
   filter: { search?: string, status?: string, includeArchived?: boolean, limit?: number, offset?: number } = {}
 ): { items: StaffRecord[], total: number } {
   assertPermission(ctx, 'staff.view')
-  const conditions = ['1 = 1']
+  /* Archived staff stay in the database; the register only shows them when asked to. */
+  const conditions = [filter.includeArchived ? '1 = 1' : 's.is_deleted = 0']
   const params: Record<string, unknown> = {}
   if (filter.search) {
     conditions.push('(s.full_name LIKE @search OR COALESCE(s.phone, \'\') LIKE @search OR COALESCE(s.designation, \'\') LIKE @search)')
@@ -102,7 +103,7 @@ export function listStaff(
     params.status = filter.status
   }
   const where = conditions.join(' AND ')
-  const total = (ctx.db.prepare(`SELECT COUNT(*) AS count FROM staff s WHERE s.is_deleted = 0 AND ${where}`).get(params) as { count: number }).count
+  const total = (ctx.db.prepare(`SELECT COUNT(*) AS count FROM staff s WHERE ${where}`).get(params) as { count: number }).count
   const limit = filter.limit ?? 100
   const offset = filter.offset ?? 0
   const rows = ctx.db
@@ -113,7 +114,7 @@ export function listStaff(
 
 export function getStaff(ctx: ServiceContext, id: number): StaffRecord {
   assertPermission(ctx, 'staff.view')
-  const row = ctx.db.prepare(`${STAFF_SELECT} AND s.id = ?`).get(id) as StaffRow | undefined
+  const row = ctx.db.prepare(`${STAFF_SELECT} AND s.is_deleted = 0 AND s.id = ?`).get(id) as StaffRow | undefined
   if (!row) throw notFoundError('staff member', id)
   return mapStaff(row)
 }

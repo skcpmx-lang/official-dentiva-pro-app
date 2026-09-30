@@ -32,6 +32,7 @@ import { AccountingScreen } from './features/accounting/AccountingScreen'
 import { ReportsScreen } from './features/reports/ReportsScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { DentistsScreen } from './features/settings/DentistsScreen'
+import { StaffScreen } from './features/settings/StaffScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
 import { RolesScreen } from './features/settings/RolesScreen'
 import { AuditScreen } from './features/admin/AuditScreen'
@@ -90,6 +91,7 @@ export function App(): ReactNode {
                 { path: 'prescriptions/:prescriptionId', element: <PermissionRoute permission="prescriptions.view"><PrescriptionScreen /></PermissionRoute> },
                 { path: 'settings', element: <PermissionRoute permission="settings.view"><SettingsScreen /></PermissionRoute> },
                 { path: 'settings/dentists', element: <PermissionRoute permission="settings.view"><DentistsScreen /></PermissionRoute> },
+                { path: 'settings/staff', element: <PermissionRoute permission="staff.view"><StaffScreen /></PermissionRoute> },
                 { path: 'settings/users', element: <PermissionRoute permission="users.view"><UsersScreen /></PermissionRoute> },
                 { path: 'settings/roles', element: <PermissionRoute permission="roles.view"><RolesScreen /></PermissionRoute> },
                 { path: 'audit', element: <PermissionRoute permission="audit.view"><AuditScreen /></PermissionRoute> },

@@ -22,6 +22,7 @@ import { Field, Select, TextArea, TextInput, DateInput, useZodForm } from '../..
 import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { GENDERS, useFormatters } from '../../lib/format'
+import { readFileAsBase64 } from '../../lib/files'
 import { usePermission } from '../../store/appStore'
 import type { PatientAttachment, Referral, TimelineEntry } from '../../lib/types'
 
@@ -612,8 +613,7 @@ function UploadAttachmentDialog({
     }
     setBusy(true)
     try {
-      const buffer = await file.arrayBuffer()
-      const dataBase64 = btoa(String.fromCharCode(...new Uint8Array(buffer)))
+      const dataBase64 = await readFileAsBase64(file)
       await invoke('attachments.upload', {
         patientId,
         fileName: file.name,
