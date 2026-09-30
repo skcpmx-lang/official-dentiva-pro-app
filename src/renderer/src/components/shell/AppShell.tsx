@@ -5,6 +5,8 @@ import {
   ChevronsRight,
   CalendarClock,
   Cog,
+  History,
+  Printer,
   ListOrdered,
   BarChart3,
   Boxes,
@@ -98,6 +100,8 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/settings/staff', label: 'Staff', icon: <IdCard size={18} />, permission: 'staff.view' },
       { to: '/settings/users', label: 'Users', icon: <UserCog size={18} />, permission: 'users.view' },
       { to: '/settings/roles', label: 'Roles', icon: <UsersRound size={18} />, permission: 'roles.view' },
+      { to: '/settings/printing', label: 'Printing', icon: <Printer size={18} />, permission: ['printing.configure', 'printing.print'] },
+      { to: '/printing/history', label: 'Print history', icon: <History size={18} />, permission: 'printing.print' },
       { to: '/audit', label: 'Audit log', icon: <ScrollText size={18} />, permission: 'audit.view' },
       { to: '/settings', label: 'Settings', icon: <Cog size={18} />, permission: 'settings.view' },
       { to: '/about', label: 'About', icon: <Info size={18} /> }

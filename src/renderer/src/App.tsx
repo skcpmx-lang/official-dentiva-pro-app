@@ -35,6 +35,8 @@ import { DentistsScreen } from './features/settings/DentistsScreen'
 import { StaffScreen } from './features/settings/StaffScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
 import { RolesScreen } from './features/settings/RolesScreen'
+import { PrintingScreen } from './features/settings/PrintingScreen'
+import { PrintHistoryScreen } from './features/printing/PrintHistoryScreen'
 import { AuditScreen } from './features/admin/AuditScreen'
 import { AboutScreen } from './features/admin/AboutScreen'
 import { NotFoundScreen } from './features/states/NotFoundScreen'
@@ -94,6 +96,8 @@ export function App(): ReactNode {
                 { path: 'settings/staff', element: <PermissionRoute permission="staff.view"><StaffScreen /></PermissionRoute> },
                 { path: 'settings/users', element: <PermissionRoute permission="users.view"><UsersScreen /></PermissionRoute> },
                 { path: 'settings/roles', element: <PermissionRoute permission="roles.view"><RolesScreen /></PermissionRoute> },
+                { path: 'settings/printing', element: <PermissionRoute permission={['printing.configure', 'printing.print']}><PrintingScreen /></PermissionRoute> },
+                { path: 'printing/history', element: <PermissionRoute permission="printing.print"><PrintHistoryScreen /></PermissionRoute> },
                 { path: 'audit', element: <PermissionRoute permission="audit.view"><AuditScreen /></PermissionRoute> },
                 { path: 'about', element: <AboutScreen /> },
                 { path: 'account/password', element: <ChangePasswordScreen /> }
