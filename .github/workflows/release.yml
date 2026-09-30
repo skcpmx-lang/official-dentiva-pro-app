@@ -25,6 +25,12 @@ jobs:
     env:
       DENTIVA_DATA_DIR: ${{ github.workspace }}\.e2e-data
       DENTIVA_ACTIVATION_CODE: '0000-0000-0000-0001'
+      # The registry occasionally needs more patience than npm's defaults give it on a shared runner;
+      # a timed-out fetch used to fail the whole job with nothing readable in the annotation.
+      NPM_CONFIG_FETCH_RETRIES: '5'
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '20000'
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
+      NPM_CONFIG_FETCH_TIMEOUT: '600000'
 
     steps:
       - name: Check out the repository
@@ -39,7 +45,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        shell: bash
+        run: |
+          if ! npm ci --no-audit --no-fund 2>&1 | tee npm-ci.log; then
+            summary=$(grep -E "npm error|npm ERR" npm-ci.log | head -5 | tr -d '%' | tr '\n\r' '  ')
+            echo "::error title=npm ci failed::${summary:-npm ci failed; see the step log}"
+            exit 1
+          fi
 
       - name: Full verification (types, lint, tests, audits)
         run: |
