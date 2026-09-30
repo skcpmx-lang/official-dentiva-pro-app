@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Lock, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { Badge, Button, Card, CardBody, CardHeader, PageHeader, Switch } from '../../components/ui/primitives'
-import { Field, Select, TextArea, TextInput, useZodForm } from '../../components/ui/form'
+import { Field, TextArea, TextInput, useZodForm } from '../../components/ui/form'
 import { Modal, confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
 import { usePermission } from '../../store/appStore'

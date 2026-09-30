@@ -12,7 +12,11 @@ import type { Logger } from '../platform/types'
  */
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const
+
+/** Severity of a log line. */
 type Level = (typeof LEVELS)[number]
+// LEVELS is the single source of truth for the union; keep it referenced so the intent is explicit.
+void LEVELS
 
 const LEVEL_ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 }
 
@@ -36,7 +40,7 @@ export function createLogger(options: LoggerOptions): Logger {
 
   let currentDate = ''
   let currentFile = ''
-  let mirror = mirrorToConsole
+  const mirror = mirrorToConsole
 
   function fileFor(timestamp: number): string {
     const date = new Date(timestamp)

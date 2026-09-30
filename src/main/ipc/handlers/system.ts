@@ -2,7 +2,7 @@ import type { ServiceContext } from '../../context'
 import { AppError } from '@shared/errors'
 import { activate, getActivationState, ACTIVATION_CODE_LENGTH_HINT } from '../../activation/service'
 import { getSetupStatus, getSetupSummary, saveAdministratorStep, saveClinicStep, saveDentistsStep, savePreferencesStep, completeSetup, resolveStage } from '../../modules/setup/service'
-import { getAllSettings, getClinicProfileSafe, getNumberSetting, getBooleanSetting, getDisplaySettings } from '../../modules/settings/service'
+import { getClinicProfileSafe, getNumberSetting, getBooleanSetting, getDisplaySettings } from '../../modules/settings/service'
 import { listAudit, auditFacets, auditEntryFor, type AuditEntry } from '../../modules/audit/service'
 import { changeOwnPassword, login } from '../../modules/auth/service'
 import { deriveActor } from '../../modules/auth/actor'
@@ -273,13 +273,11 @@ export function createSystemHandlers(deps: HandlerDeps): PartialHandlerMap {
         module: 'audit',
         action: 'export',
         summary: `Exported ${page.entries.length} audit entr(y/ies) to CSV`,
-        detail: { file: target, rows: page.entries.length }
+        detail: { file: target, rows: rowCount }
       })
-      return { path: target, rowCount: page.entries.length }
+      return { path: target, rowCount }
     },
-    'audit.forEntity': (ctx, input) => auditEntryFor(ctx, input.entityType, input.entityId, input.limit),
-
-    'settings.all': (ctx) => getAllSettings(ctx)
+    'audit.forEntity': (ctx, input) => auditEntryFor(ctx, input.entityType, input.entityId, input.limit)
   }
 }
 

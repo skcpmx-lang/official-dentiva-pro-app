@@ -85,7 +85,7 @@ export function createPatientHandlers(deps: HandlerDeps): PartialHandlerMap {
         module: 'patients',
         action: 'export',
         summary: `Exported ${page.items.length} patient record(s) to CSV`,
-        detail: { file: target, rows: page.items.length }
+        detail: { file: target, rows: rowCount }
       })
       return { path: target, rowCount: page.items.length }
     },

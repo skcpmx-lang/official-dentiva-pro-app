@@ -2,6 +2,7 @@ import type { Db } from './connection'
 import { PERMISSIONS, DEFAULT_ROLES, expandRolePermissions } from '@shared/permissions'
 import { DEFAULT_TOOTH_CONDITIONS } from '@shared/dental'
 import { SETTING_DEFS } from '../modules/settings/defaults'
+import { foldForSearch } from '@shared/bengali'
 
 /**
  * Seeds reference data. Safe to run on every start: every statement is an upsert of catalog data that
@@ -200,8 +201,8 @@ function seedExpenseCategories(db: Db): void {
  */
 function seedTreatmentCatalog(db: Db, now: number): void {
   const insert = db.prepare(
-    `INSERT INTO treatments (code, name, name_bn, category, description, default_price_micro, duration_min, is_active, notes, created_at, updated_at)
-     VALUES (@code, @name, @nameBn, @category, @description, 0, @duration, 1, NULL, @now, @now)
+    `INSERT INTO treatments (code, name, name_fold, name_bn, category, description, default_price_micro, duration_min, is_active, notes, created_at, updated_at)
+     VALUES (@code, @name, @nameFold, @nameBn, @category, @description, 0, @duration, 1, NULL, @now, @now)
      ON CONFLICT(code) DO NOTHING`
   )
   const rows: Array<{ code: string; name: string; nameBn: string | null; category: string; description: string | null; duration: number | null }> = [
@@ -239,7 +240,7 @@ function seedTreatmentCatalog(db: Db, now: number): void {
     { code: 'NIGHTGUARD', name: 'Night guard / occlusal splint', nameBn: 'নাইট গার্ড', category: 'prosthetic', description: null, duration: 45 },
     { code: 'OTHER', name: 'Other procedure', nameBn: 'অন্যান্য', category: 'general', description: 'Use when the procedure is not listed in the catalog', duration: null }
   ]
-  for (const row of rows) insert.run({ ...row, now })
+  for (const row of rows) insert.run({ ...row, nameFold: foldForSearch(row.name), now })
 }
 
 function seedPrintProfiles(db: Db, now: number): void {

@@ -419,6 +419,8 @@ CREATE TABLE IF NOT EXISTS treatments (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   code               TEXT NOT NULL UNIQUE,
   name               TEXT NOT NULL,
+  -- Search-folded treatment name (NFC + case folded); maintained by the treatments service and seed.
+  name_fold          TEXT,
   name_bn            TEXT,
   category           TEXT NOT NULL DEFAULT 'general',
   description        TEXT,
@@ -430,7 +432,8 @@ CREATE TABLE IF NOT EXISTS treatments (
   created_at         INTEGER NOT NULL,
   updated_at         INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_treatments_cat ON treatments(category, is_active);
+CREATE INDEX IF NOT EXISTS idx_treatments_cat  ON treatments(category, is_active);
+CREATE INDEX IF NOT EXISTS idx_treatments_fold ON treatments(name_fold);
 
 CREATE TABLE IF NOT EXISTS visit_treatments (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -481,6 +484,8 @@ CREATE TABLE IF NOT EXISTS prescription_medicines (
   prescription_id  INTEGER NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE ON UPDATE CASCADE,
   sort_order       INTEGER NOT NULL DEFAULT 0,
   medicine_name    TEXT NOT NULL,
+  -- Search-folded medicine name (NFC + case folded); populated by the prescriptions service only.
+  medicine_fold    TEXT,
   form             TEXT,
   strength         TEXT,
   unit             TEXT,
@@ -496,6 +501,7 @@ CREATE TABLE IF NOT EXISTS prescription_medicines (
   instructions     TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_rx_medicines ON prescription_medicines(prescription_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_rx_medicines_fold ON prescription_medicines(medicine_fold);
 
 CREATE TABLE IF NOT EXISTS prescription_templates (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

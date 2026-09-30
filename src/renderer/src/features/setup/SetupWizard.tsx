@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Building2, CheckCircle2, Printer, Stethoscope, UserRound, Wallet } from 'lucide-react'
 import { zClinicProfileInput, zDentistInput, zSetupAdministratorInput } from '@shared/contracts'
-import { Badge, Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
+import { Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
 import { Field, NumberInput, TextArea, TextInput, useZodForm } from '../../components/ui/form'
 import { confirmDialog, toast } from '../../components/ui/overlay'
 import { errorMessage, invoke, useInvoke } from '../../lib/api'
@@ -37,12 +37,15 @@ export function SetupWizard(): ReactNode {
 
   const loadSummary = () => invoke('setup.summary', {})
 
+  // An interrupted setup resumes at the first step that is still incomplete.
   useEffect(() => {
-    if (status.data?.hasClinic && !status.data.hasAdministrator) setStep('administrator')
-    else if (status.data?.hasClinic && status.data.dentistCount > 0 && !status.data.hasAdministrator) setStep('administrator')
-    else if (status.data?.hasClinic && status.data.dentistCount === 0) setStep('dentists')
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status.data?.hasClinic, status.data?.dentistCount, status.data?.hasAdministrator])
+    const data = status.data
+    if (!data) return
+    if (!data.hasClinic) setStep('clinic')
+    else if (data.dentistCount === 0) setStep('dentists')
+    else if (!data.hasAdministrator) setStep('administrator')
+    else setStep('preferences')
+  }, [status.data])
 
   const completed = useMemo(
     () => ({

@@ -99,8 +99,8 @@ describe('navigation and permissions in the user interface', () => {
       'patients.list': (payload) => ({
         items: [],
         total: 0,
-        limit: payload.limit ?? 25,
-        offset: payload.offset ?? 0
+        limit: payload?.limit ?? 25,
+        offset: payload?.offset ?? 0
       }),
       'patients.tags': () => []
     })

@@ -6,6 +6,9 @@
  * search predictable without a dependency on external collation data.
  */
 
+// The class deliberately includes zero-width joiners/non-joiners (U+200B–U+200D): they are invisible
+// characters that must be stripped before search folding, not a copy/paste mistake.
+// eslint-disable-next-line no-misleading-character-class
 const ZERO_WIDTH = /[\u200B\u200C\u200D\u200E\u200F\uFEFF\u2060]/g
 const BENGALI_RANGE = /[\u0980-\u09FF]/
 const WHITESPACE = /[\s\u00A0]+/g

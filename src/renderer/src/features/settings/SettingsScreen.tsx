@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Building2, Cog, FolderOpen, Save, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { Building2, FolderOpen, Save, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { Button, Card, CardBody, CardHeader, Checkbox, PageHeader, Tabs, Toolbar } from '../../components/ui/primitives'
 import { Field, Select, TextArea, TextInput } from '../../components/ui/form'
 import { toast } from '../../components/ui/overlay'

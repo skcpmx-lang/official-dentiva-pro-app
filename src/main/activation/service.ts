@@ -1,4 +1,4 @@
-import { scryptSync, timingSafeEqual } from 'node:crypto'
+import { timingSafeEqual } from 'node:crypto'
 import type { Db } from '../db/connection'
 import type { ServiceContext } from '../context'
 import { AppError } from '@shared/errors'

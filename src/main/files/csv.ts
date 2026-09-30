@@ -36,7 +36,7 @@ export function writeCsv<Row>(absolutePath: string, rows: Row[], columns: Array<
   const content = toCsv(rows, columns)
   try {
     writeFileSync(absolutePath, content, 'utf8')
-  } catch (error) {
+  } catch {
     throw ioError(`The file could not be written to ${absolutePath}. Choose another location and try again.`)
   }
   return Buffer.byteLength(content, 'utf8')

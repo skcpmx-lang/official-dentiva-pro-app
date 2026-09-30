@@ -2,6 +2,7 @@ import { systemChannels } from './system'
 import { practiceChannels } from './practice'
 import { dashboardChannels } from './dashboard'
 import { patientChannels } from './patients'
+import { clinicalChannels } from './clinical'
 
 /**
  * The complete IPC channel registry. `CHANNELS` is the single source of truth for:
@@ -15,6 +16,7 @@ export const CHANNELS = {
   ...systemChannels,
   ...practiceChannels,
   ...patientChannels,
+  ...clinicalChannels,
   ...dashboardChannels
 } as const
 
@@ -26,3 +28,4 @@ export * from './system'
 export * from './practice'
 export * from './patients'
 export * from './dashboard'
+export * from './clinical'

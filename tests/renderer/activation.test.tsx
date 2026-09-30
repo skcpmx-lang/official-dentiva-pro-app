@@ -97,9 +97,13 @@ describe('ActivationScreen', () => {
     await waitFor(() => expect(screen.getByText(/enter the activation code/i)).toBeInTheDocument())
   })
 
-  it('reacts to a lock event broadcast by the main process', async () => {
-    useAppStore.setState({ session: null, locked: false })
-    emitEvent('session:locked', { reason: 'idle', at: Date.now() })
-    expect(useAppStore.getState().session).toBeNull()
+  it('propagates a session-ended event to subscribers of the preload bridge', async () => {
+    let seen: { reason: string } | null = null
+    const unsubscribe = window.dentiva.on('session:ended', (payload) => {
+      seen = payload
+    })
+    emitEvent('session:ended', { reason: 'logout' })
+    unsubscribe()
+    expect(seen).toEqual({ reason: 'logout' })
   })
 })

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { existsSync, mkdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { AppError } from '@shared/errors'
-import { SCHEMA_VERSION, SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL } from './schema'
+import { SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL } from './schema'
 import { MIGRATIONS, ensureSchemaTable, readSchemaVersion } from './migrate'
 import { seedDatabase } from './seed'
 
