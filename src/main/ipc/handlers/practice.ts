@@ -8,6 +8,7 @@ import { listRoles, saveRole, deleteRole, permissionCatalog } from '../../module
 import { getPreferences, listRecentlyViewed, setPreferences } from '../../modules/preferences/service'
 import { storeImage, deleteStoredFile, resolveStoredPath } from '../../files/storage'
 import type { PartialHandlerMap } from '../router'
+import { assertPermission } from '../../context'
 import type { HandlerDeps } from './system'
 
 /**
@@ -54,6 +55,7 @@ export function createPracticeHandlers(deps: HandlerDeps): PartialHandlerMap {
     },
 
     'settings.uploadLogo': (ctx, input) => {
+      assertPermission(ctx, 'settings.modify')
       const stored = storeImage(ctx.host.paths.dataDir, 'branding', input)
       const previous = getClinicProfile(ctx).logoPath
       applyLogo(ctx, stored.relativePath)
@@ -63,6 +65,7 @@ export function createPracticeHandlers(deps: HandlerDeps): PartialHandlerMap {
     },
 
     'settings.clearLogo': (ctx) => {
+      assertPermission(ctx, 'settings.modify')
       const previous = getClinicProfile(ctx).logoPath
       applyLogo(ctx, null)
       if (previous) deleteStoredFile(resolveStoredPath(ctx.host.paths.dataDir, previous), ctx.host.paths.dataDir)

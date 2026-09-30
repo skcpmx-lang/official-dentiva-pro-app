@@ -7,6 +7,13 @@ import { useAppStore } from '../../src/renderer/src/store/appStore'
 import { emitEvent, mockChannels } from './setup'
 import type { ActivationState, BootstrapResult } from '../../src/renderer/src/lib/types'
 
+/**
+ * A code-shaped string for the screen to type. The renderer test mocks `activation.submit`, so the
+ * main process never sees it — which is exactly why the production code must not appear here (or
+ * anywhere else in the repository): only the derived verifier ships.
+ */
+const SAMPLE_CODE = '1111-2222-3333-4444'
+
 const activationState: ActivationState = {
   activated: false,
   activatedAt: null,
@@ -64,7 +71,7 @@ describe('ActivationScreen', () => {
 
     renderActivation()
     const input = screen.getByLabelText(/activation code/i)
-    await userEvent.type(input, '1516-5919-3501-5165')
+    await userEvent.type(input, SAMPLE_CODE)
     await userEvent.click(screen.getByRole('button', { name: /activate/i }))
 
     await waitFor(() => expect(screen.getByText('setup screen')).toBeInTheDocument())

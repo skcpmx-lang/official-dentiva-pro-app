@@ -36,6 +36,7 @@
     "audit:deps": "node scripts/audit-dependencies.mjs",
     "audit:deps:check": "node scripts/audit-dependencies.mjs --check",
     "audit:deadcode": "node scripts/audit-deadcode.mjs",
+    "audit:security": "node scripts/audit-security.mjs",
     "stress:seed": "tsx --tsconfig tsconfig.node.json scripts/stress-seed.ts",
     "build:info": "node scripts/generate-build-info.mjs",
     "rebuild:electron": "electron-builder install-app-deps",

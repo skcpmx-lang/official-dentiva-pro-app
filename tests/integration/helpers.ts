@@ -62,12 +62,13 @@ export function createHarness(options: { keepData?: boolean } = {}): TestHarness
 /**
  * Activates the test instance through the real activation service.
  *
- * The development-only environment verifier accepts the code configured in
- * `DENTIVA_TEST_ACTIVATION_CODE` (defaulting to a test value) — the production verifier table is never
- * duplicated in test sources, and packaged builds ignore the environment path entirely.
+ * The development-only environment verifier (`activation/service.ts`) accepts the code configured in
+ * `DENTIVA_ACTIVATION_CODE`, and only while `host.isDevelopment()` is true (`!app.isPackaged`), so a
+ * packaged build ignores the environment path entirely. The production verifier table is never
+ * duplicated in test sources.
  */
 export function activateForTest(harness: TestHarness, code?: string): void {
-  const value = code ?? process.env.DENTIVA_TEST_ACTIVATION_CODE ?? '0000000000000000'
+  const value = code ?? process.env.DENTIVA_ACTIVATION_CODE ?? '0000000000000000'
   process.env.DENTIVA_ACTIVATION_CODE = value
   try {
     activate(harness.systemCtx(), value)

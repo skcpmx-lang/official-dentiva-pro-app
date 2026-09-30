@@ -8,8 +8,11 @@ import { AppError } from '@shared/errors'
  * Safe file handling for attachments, branding images and exports.
  *
  * Every path that originates from the UI or the database passes through `safeJoin`, which rejects
- * traversal, absolute paths, drive letters and NUL bytes; stored paths are always relative to the
- * application data directory so the clinic folder can be moved or restored without breaking links.
+ * traversal, absolute paths, drive letters/UNC prefixes and NUL bytes; stored paths are always
+ * relative to the application data directory so the clinic folder can be moved or restored without
+ * breaking links. Symlinks are deliberately not chased: the application creates every folder below
+ * the data directory itself with generated names, and anyone able to plant a link inside it already
+ * has the workstation's file system (see the threat model in `docs/SECURITY_MODEL.md` §1).
  */
 
 export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -17,7 +20,16 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 export function safeJoin(root: string, ...segments: string[]): string {
   const cleanRoot = resolve(root)
-  const target = resolve(cleanRoot, ...segments.map((segment) => normalize(String(segment))))
+  const parts = segments.map((segment) => String(segment))
+  for (const part of parts) {
+    if (part.includes('\u0000')) {
+      throw new AppError('E_PERMISSION', 'The requested file location is not valid.')
+    }
+    if (/^[a-zA-Z]:/.test(part) || part.startsWith('\\') || part.startsWith('//')) {
+      throw new AppError('E_PERMISSION', 'The requested file location must stay inside the clinic data folder.')
+    }
+  }
+  const target = resolve(cleanRoot, ...parts.map((segment) => normalize(segment)))
   if (target !== cleanRoot && !target.startsWith(`${cleanRoot}${sep}`)) {
     throw new AppError('E_PERMISSION', 'The requested file location is outside the application data folder.')
   }

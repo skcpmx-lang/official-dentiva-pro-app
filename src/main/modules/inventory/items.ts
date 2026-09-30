@@ -1,5 +1,5 @@
 import type { ServiceContext } from '../../context'
-import { assertPermission } from '../../context'
+import { assertAnyPermission, assertPermission } from '../../context'
 import { conflictError, notFoundError, stateError, validationError } from '@shared/errors'
 import { foldForSearch } from '@shared/bengali'
 import { toLocalDate } from '@shared/datetime'
@@ -361,6 +361,7 @@ export function mapBatch(row: BatchRow, today = toLocalDate(Date.now())): BatchR
 }
 
 export function batchesForItem(ctx: ServiceContext, itemId: number): BatchRecord[] {
+  assertAnyPermission(ctx, ['inventory.view', 'inventory.adjust', 'inventory.create'])
   const rows = ctx.db
     .prepare(
       `SELECT id, item_id, batch_no, expiry_date, quantity, unit_cost_micro, supplier_id, received_at, note

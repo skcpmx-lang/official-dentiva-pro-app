@@ -12,6 +12,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  /* On a runner, failures are also written as check-run annotations so a failing workflow can be read
+     without downloading the HTML report (the annotations come back through the GitHub API). */
+  reporter: process.env.GITHUB_ACTIONS
+    ? [['list'], ['github'], ['html', { open: 'never', outputFolder: 'playwright-report' }]]
+    : 'list',
   use: { trace: 'retain-on-failure', screenshot: 'only-on-failure' }
 })

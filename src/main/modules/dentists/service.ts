@@ -92,6 +92,7 @@ export function getDentist(ctx: ServiceContext, id: number): DentistRecord {
  * Designations/qualifications are multi-entry by design (a dentist typically lists several).
  */
 export function saveDentist(ctx: ServiceContext, input: DentistInput): DentistRecord {
+  assertPermission(ctx, 'settings.modify')
   const errors: Record<string, string> = {}
   const fullName = normalizeBengali(input.fullName).trim()
   if (fullName.length < 2) errors.fullName = 'Enter the dentist’s full name.'
