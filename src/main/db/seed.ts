@@ -160,7 +160,9 @@ function seedClinicalVocabulary(db: Db): void {
       code: condition.code,
       name: condition.label,
       nameBn: null,
-      category: 'tooth_condition',
+      // The chart groups conditions by kind (finding / treatment / state) — the same value the
+      // `chart.get` contract expects, so the screen can group them without a second lookup.
+      category: condition.kind,
       appliesTooth: 1,
       sortOrder: index
     })

@@ -69,16 +69,29 @@ export function SetupWizard(): ReactNode {
   }
 
   const finish = async (): Promise<void> => {
+    let data = summary
+    try {
+      if (!data) {
+        data = await loadSummary()
+        setSummary(data)
+      }
+    } catch (error) {
+      toast('error', 'The setup summary could not be loaded', errorMessage(error))
+      return
+    }
+    // The clinic name is the confirmation phrase: the operator has just typed it, and having to type
+    // it again makes it impossible to finish setup on an installation that belongs to another clinic.
     const answer = await confirmDialog({
       title: 'Finish setup and open Dentiva Pro?',
       message:
         'The clinic profile, dentists and administrator account will be used for every prescription, invoice and printed document. Details can still be changed later in Settings.',
-      confirmLabel: 'Finish setup'
+      confirmLabel: 'Finish setup',
+      confirmationPhrase: data.clinic.name
     })
     if (!answer.confirmed) return
     setBusy(true)
     try {
-      await invoke('setup.complete', { confirmation: 'COMPLETE SETUP' })
+      await invoke('setup.complete', { confirmation: answer.phrase ?? '' })
       const payload = await invoke('app.bootstrap', {})
       applyBootstrap(payload)
       toast('success', 'Setup complete', 'Sign in with the administrator account you just created.')

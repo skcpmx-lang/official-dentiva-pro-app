@@ -29,6 +29,16 @@ export interface ClinicProfile {
 /** All settings, defaults applied, with types left as strings for the IPC boundary. */
 export function getAllSettings(ctx: ServiceContext): SettingsMap {
   assertPermission(ctx, 'settings.view')
+  return readSettings(ctx)
+}
+
+/**
+ * Read every known setting without a permission check.
+ *
+ * Used by the setup wizard's review step, which runs before an administrator (and therefore before any
+ * role) exists. Operator-facing channels still go through `getAllSettings`.
+ */
+export function readSettings(ctx: ServiceContext): SettingsMap {
   const rows = ctx.db.prepare('SELECT key, value FROM settings').all() as Array<{ key: string, value: string }>
   const result: SettingsMap = { ...SETTING_DEFAULTS }
   for (const row of rows) {
@@ -132,6 +142,17 @@ function validateSettingValue(key: string, value: string): string {
 
 export function updateSettings(ctx: ServiceContext, values: SettingsMap): SettingsMap {
   assertPermission(ctx, 'settings.modify')
+  return applySettings(ctx, values)
+}
+
+/**
+ * Validate and persist settings without a permission check.
+ *
+ * The setup wizard runs before any operator account exists, so it cannot hold `settings.modify`; it
+ * calls this directly behind its own `assertSetupPending` state guard. Everything else goes through
+ * `updateSettings`.
+ */
+export function applySettings(ctx: ServiceContext, values: SettingsMap): SettingsMap {
   const now = ctx.now()
   const upsert = ctx.db.prepare(
     `INSERT INTO settings (key, value, updated_at, updated_by) VALUES (@key, @value, @at, @userId)
@@ -252,6 +273,17 @@ export interface ClinicProfileInput {
 
 export function updateClinicProfile(ctx: ServiceContext, input: ClinicProfileInput): ClinicProfile {
   assertPermission(ctx, 'settings.modify')
+  return writeClinicProfile(ctx, input)
+}
+
+/**
+ * Validate and persist the clinic profile without a permission check.
+ *
+ * The setup wizard's first step has no operator to authorise — it is guarded by `assertSetupPending`
+ * and the activation check in `setup/service.ts`. The Settings screen goes through
+ * `updateClinicProfile`, which asserts `settings.modify` first.
+ */
+export function writeClinicProfile(ctx: ServiceContext, input: ClinicProfileInput): ClinicProfile {
   const errors: Record<string, string> = {}
   const name = normalizeBengali(input.name ?? '').trim()
   if (name.length < 2) errors['clinic.name'] = 'Enter the clinic name (at least 2 characters).'

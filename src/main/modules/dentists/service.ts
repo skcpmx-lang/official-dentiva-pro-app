@@ -93,6 +93,17 @@ export function getDentist(ctx: ServiceContext, id: number): DentistRecord {
  */
 export function saveDentist(ctx: ServiceContext, input: DentistInput): DentistRecord {
   assertPermission(ctx, 'settings.modify')
+  return upsertDentist(ctx, input)
+}
+
+/**
+ * Create or update a dentist without a permission check.
+ *
+ * The setup wizard's dentist step runs before any operator account exists; it is guarded by
+ * `assertSetupPending` in `setup/service.ts`. The Settings screen and every other caller go through
+ * `saveDentist`, which asserts `settings.modify` first.
+ */
+export function upsertDentist(ctx: ServiceContext, input: DentistInput): DentistRecord {
   const errors: Record<string, string> = {}
   const fullName = normalizeBengali(input.fullName).trim()
   if (fullName.length < 2) errors.fullName = 'Enter the dentist’s full name.'

@@ -1,7 +1,7 @@
 import type { ServiceContext } from '../../context'
 import { AppError, stateError, validationError } from '@shared/errors'
-import {getClinicProfile, updateClinicProfile, getNumberSetting, updateSettings, getAllSettings, type ClinicProfileInput } from '../settings/service'
-import { listDentists, saveDentist, type DentistInput, type DentistRecord } from '../dentists/service'
+import { applySettings, getClinicProfile, getNumberSetting, readSettings, writeClinicProfile, type ClinicProfileInput } from '../settings/service'
+import { listDentists, upsertDentist, type DentistInput, type DentistRecord } from '../dentists/service'
 import { hashPassword, validatePasswordStrength, DEFAULT_POLICY } from '../../auth/password'
 import { expandRolePermissions } from '@shared/permissions'
 import { isActivated } from '../../activation/service'
@@ -60,10 +60,10 @@ export function getSetupStatus(ctx: ServiceContext): SetupStatus {
   }
 }
 
-export function saveClinicStep(ctx: ServiceContext, input: ClinicProfileInput): ReturnType<typeof updateClinicProfile> {
+export function saveClinicStep(ctx: ServiceContext, input: ClinicProfileInput): ReturnType<typeof writeClinicProfile> {
   assertSetupPending(ctx)
   if (!isActivated(ctx.db)) throw new AppError('E_LICENSE', 'Activate Dentiva Pro before running the setup wizard.')
-  return updateClinicProfile(ctx, input)
+  return writeClinicProfile(ctx, input)
 }
 
 export function saveDentistsStep(ctx: ServiceContext, dentists: DentistInput[]): DentistRecord[] {
@@ -72,7 +72,7 @@ export function saveDentistsStep(ctx: ServiceContext, dentists: DentistInput[]):
   const saved: DentistRecord[] = []
   for (const dentist of dentists) {
     const existing = listDentists(ctx, { includeInactive: true }).find((entry) => entry.fullName.toLowerCase() === dentist.fullName.trim().toLowerCase())
-    saved.push(saveDentist(ctx, { ...dentist, id: dentist.id ?? existing?.id ?? null }))
+    saved.push(upsertDentist(ctx, { ...dentist, id: dentist.id ?? existing?.id ?? null }))
   }
   return saved
 }
@@ -134,8 +134,8 @@ export function savePreferencesStep(ctx: ServiceContext, values: Record<string, 
     if (!SETUP_SETTING_KEYS.has(key)) continue
     filtered[key] = value
   }
-  if (Object.keys(filtered).length === 0) return getAllSettings(ctx)
-  return updateSettings(ctx, filtered)
+  if (Object.keys(filtered).length === 0) return readSettings(ctx)
+  return applySettings(ctx, filtered)
 }
 
 export interface SetupSummary {
@@ -150,7 +150,7 @@ export interface SetupSummary {
 export function getSetupSummary(ctx: ServiceContext): SetupSummary {
   const dentistRows = ctx.db.prepare('SELECT id FROM dentists WHERE is_deleted = 0 ORDER BY sort_order, full_name').all() as Array<{ id: number }>
   const admin = ctx.db.prepare('SELECT full_name, username FROM users WHERE is_deleted = 0 ORDER BY id LIMIT 1').get() as { full_name: string, username: string } | undefined
-  const settings = getAllSettings(ctx)
+  const settings = readSettings(ctx)
   const selectedKeys = ['practice.dateFormat', 'practice.timeFormat', 'practice.appointmentDuration', 'practice.autoLockMinutes', 'print.defaultPaperClass', 'invoice.numberPrefix', 'backup.frequencyDays', 'backup.folder']
   const preferences: Record<string, string> = {}
   for (const key of selectedKeys) preferences[key] = settings[key] ?? ''

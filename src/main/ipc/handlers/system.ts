@@ -77,17 +77,23 @@ export function createSystemHandlers(deps: HandlerDeps): PartialHandlerMap {
   const sessionSummary = (webContentsId: number): ReturnType<SessionManager['summarize']> => deps.sessions.summarize(webContentsId)
 
   return {
-    'app.bootstrap': (ctx) => ({
-      stage: resolveStage(ctx),
-      build: ctx.host.build,
-      machine: ctx.host.machine,
-      clinic: getClinicProfileSafe(ctx),
-      activation: { ...getActivationState(ctx), codeHint: ACTIVATION_CODE_LENGTH_HINT },
-      setup: getSetupStatus(ctx),
-      maintenanceMode: deps.isMaintenanceMode(),
-      settings: getDisplaySettings(ctx),
-      session: sessionSummary(ctx.webContentsId)
-    }),
+    'app.bootstrap': (ctx) => {
+      const session = sessionSummary(ctx.webContentsId)
+      // The stage says what this window should show. `resolveStage` answers for a window with no
+      // session (activation, setup wizard, sign-in); an authenticated window goes straight to the
+      // workspace, so a reload never flashes the sign-in screen at an operator who is already in.
+      return {
+        stage: session ? 'ready' : resolveStage(ctx),
+        build: ctx.host.build,
+        machine: ctx.host.machine,
+        clinic: getClinicProfileSafe(ctx),
+        activation: { ...getActivationState(ctx), codeHint: ACTIVATION_CODE_LENGTH_HINT },
+        setup: getSetupStatus(ctx),
+        maintenanceMode: deps.isMaintenanceMode(),
+        settings: getDisplaySettings(ctx),
+        session
+      }
+    },
 
     'app.environment': (ctx) => ({
       build: ctx.host.build,

@@ -76,9 +76,17 @@ function conditionName(code: string): string {
  * `status = 'resolved'`, so the chart shows current state while the history stays auditable.
  */
 
+/**
+ * The dental condition vocabulary: the rows of `clinical_findings` that a dentist can mark on a tooth.
+ *
+ * The same table also holds the prescription vocabulary (chief complaints, examination notes, advice)
+ * with `applies_tooth = 0`; those belong to the prescription screens and are not chart conditions. The
+ * chart channels return only the tooth vocabulary, whose `category` is the kind the screen groups by —
+ * finding, treatment or state — which is exactly what the channel contract declares.
+ */
 export function listConditions(ctx: ServiceContext, includeInactive = false): ChartConditionRecord[] {
   const rows = ctx.db
-    .prepare(`SELECT * FROM clinical_findings ${includeInactive ? '' : 'WHERE is_active = 1'} ORDER BY sort_order, name COLLATE NOCASE`)
+    .prepare(`SELECT * FROM clinical_findings WHERE applies_tooth = 1 ${includeInactive ? '' : 'AND is_active = 1'} ORDER BY sort_order, name COLLATE NOCASE`)
     .all() as ConditionRow[]
   return rows.map((row) => ({
     code: row.code,

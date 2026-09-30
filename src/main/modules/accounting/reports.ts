@@ -59,25 +59,32 @@ const date = (key: string, header: string): ReportColumn => ({ key, header, alig
 const percent = (key: string, header: string): ReportColumn => ({ key, header, align: 'right', format: 'percent' })
 
 export const REPORT_DEFINITIONS: ReportDefinition[] = [
-  { key: 'revenue_daily', title: 'Collections by day', description: 'Money received from patients, refunds and the net for each day.', usesRange: true, permission: 'reports.view' },
-  { key: 'collections_method', title: 'Collections by method', description: 'How patients paid: cash, card, bKash, bank and the rest.', usesRange: true, permission: 'reports.view' },
-  { key: 'expenses_category', title: 'Expenses by category', description: 'Clinic spending grouped by the category it was recorded under.', usesRange: true, permission: 'reports.view' },
-  { key: 'profit_loss', title: 'Income and expenses', description: 'Patient collections plus other income against recorded expenses for the period.', usesRange: true, permission: 'reports.view' },
-  { key: 'receivables', title: 'Outstanding dues', description: 'Every unpaid or partly paid invoice with how long it has been outstanding.', usesRange: false, permission: 'reports.view' },
-  { key: 'top_treatments', title: 'Treatments performed', description: 'Treatments carried out in the period with the revenue they brought in.', usesRange: true, permission: 'reports.view' },
+  { key: 'revenue_daily', title: 'Collections by day', description: 'Money received from patients, refunds and the net for each day.', usesRange: true, permission: 'reports.financial' },
+  { key: 'collections_method', title: 'Collections by method', description: 'How patients paid: cash, card, bKash, bank and the rest.', usesRange: true, permission: 'reports.financial' },
+  { key: 'expenses_category', title: 'Expenses by category', description: 'Clinic spending grouped by the category it was recorded under.', usesRange: true, permission: 'reports.financial' },
+  { key: 'profit_loss', title: 'Income and expenses', description: 'Patient collections plus other income against recorded expenses for the period.', usesRange: true, permission: 'reports.financial' },
+  { key: 'receivables', title: 'Outstanding dues', description: 'Every unpaid or partly paid invoice with how long it has been outstanding.', usesRange: false, permission: 'reports.financial' },
+  { key: 'top_treatments', title: 'Treatments performed', description: 'Treatments carried out in the period with the revenue they brought in.', usesRange: true, permission: 'reports.financial' },
   { key: 'appointment_stats', title: 'Appointment outcomes', description: 'Appointments by status, including cancellations and no-shows.', usesRange: true, permission: 'reports.view' },
   { key: 'patient_growth', title: 'New patients', description: 'Patients registered per month in the period.', usesRange: true, permission: 'reports.view' },
-  { key: 'dentist_workload', title: 'Dentist workload', description: 'Visits, treatments and revenue per dentist.', usesRange: true, permission: 'reports.view' },
-  { key: 'stock_value', title: 'Stock valuation', description: 'Stock on hand per category with its value and what needs attention.', usesRange: false, permission: 'reports.view' }
+  { key: 'dentist_workload', title: 'Dentist workload', description: 'Visits, treatments and revenue per dentist.', usesRange: true, permission: 'reports.financial' },
+  { key: 'stock_value', title: 'Stock valuation', description: 'Stock on hand per category with its value and what needs attention.', usesRange: false, permission: 'reports.financial' }
 ]
 
 /**
- * Reports are readable by anyone who may see operational reports (`reports.view`) or the financial ones
- * (`accounting.reports`); the definitions themselves declare which permission a report belongs to.
+ * The reports a caller may open.
+ *
+ * Every definition carries the permission it belongs to — operational reports need `reports.view`,
+ * money reports need `reports.financial` — and `accounting.reports` opens both, which is the
+ * accountant's role. The catalog is filtered rather than returned whole, so the screen cannot offer a
+ * report the service would refuse; running a hidden report is still refused by `runReport`.
  */
 export function reportCatalog(ctx: ServiceContext): ReportDefinition[] {
-  assertAnyPermission(ctx, ['reports.view', 'accounting.reports'])
-  return REPORT_DEFINITIONS
+  assertAnyPermission(ctx, ['reports.view', 'reports.financial', 'accounting.reports'])
+  const permissions = ctx.actor.permissions
+  return REPORT_DEFINITIONS.filter(
+    (definition) => permissions.has(definition.permission) || permissions.has('accounting.reports')
+  )
 }
 
 function resolvePeriod(ctx: ServiceContext, filter: ReportFilter): { from: string, to: string } {

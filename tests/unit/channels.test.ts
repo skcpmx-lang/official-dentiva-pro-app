@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { CHANNELS, type ChannelId } from '@shared/contracts'
 import { createSystemHandlers } from '@main/ipc/handlers/system'
 import { createPracticeHandlers } from '@main/ipc/handlers/practice'
@@ -199,5 +201,41 @@ describe('IPC channel registry', () => {
         'prescriptions.export'
       ])
     )
+  })
+})
+
+describe('renderer channel usage', () => {
+  /**
+   * A channel name typed in the interface that does not exist in the registry would compile — the
+   * bridge takes a string — and would then fail at run time on a screen an operator is using. This
+   * scan closes that gap: every `invoke('…')` and `useInvoke('…')` in the renderer must name a
+   * declared channel, which is also what keeps the "no dead navigation" rule honest.
+   */
+  it('invokes only channels that the contract registry declares', () => {
+    const rendererRoot = resolve(__dirname, '..', '..', 'src', 'renderer', 'src')
+    const files: string[] = []
+    const walk = (directory: string): void => {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const full = join(directory, entry.name)
+        if (entry.isDirectory()) walk(full)
+        else if (/\.tsx?$/.test(entry.name)) files.push(full)
+      }
+    }
+    walk(rendererRoot)
+
+    const used = new Map<string, string>()
+    for (const file of files) {
+      const source = readFileSync(file, 'utf8')
+      for (const match of source.matchAll(/\b(?:invoke|useInvoke)\(\s*'([a-zA-Z]+\.[a-zA-Z0-9.]+)'/g)) {
+        const channel = match[1]
+        if (channel && !used.has(channel)) used.set(channel, file.slice(rendererRoot.length + 1))
+      }
+    }
+
+    // Guards the scan itself: a change to how the bridge is called must not silently disable the check.
+    expect(used.size).toBeGreaterThan(50)
+
+    const unknown = [...used.entries()].filter(([channel]) => !(channel in CHANNELS))
+    expect(unknown, `the interface calls channels that do not exist: ${unknown.map(([channel, file]) => `${channel} (${file})`).join(', ')}`).toEqual([])
   })
 })

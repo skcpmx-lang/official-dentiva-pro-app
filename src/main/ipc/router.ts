@@ -154,8 +154,14 @@ export class IpcRouter {
       const result = await handler(ctx, parsedInput.data as never)
       const parsedOutput = def.output.safeParse(result)
       if (!parsedOutput.success) {
-        host.logger.error('IPC output failed validation', new Error(parsedOutput.error.message), { channelId })
-        throw new AppError('E_INTERNAL', 'The action completed but its result could not be displayed. Please reopen the screen.')
+        // A handler returning a value its own contract rejects is a defect in this build, not something
+        // the operator can repair. The issue paths go into `detail` — never into the message she reads —
+        // so a support log, or a failing end-to-end run, names the offending field immediately.
+        const issues = parsedOutput.error.issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        host.logger.error('IPC output failed validation', new Error(issues.join(' | ')), { channelId })
+        throw new AppError('E_INTERNAL', 'The action completed but its result could not be displayed. Please reopen the screen.', {
+          detail: { channelId, issues }
+        })
       }
       return { ok: true, data: parsedOutput.data }
     } catch (error) {

@@ -17,7 +17,7 @@ This is the final build. There is no update channel and no future-feature scaffo
 | Money in/out | Expense and income ledger, payment methods recorded as categories (cash, bKash, Nagad, Rocket, Upay, card, bank, other) |
 | Stock | Inventory items, batches with expiry, suppliers, purchase orders, low-stock and expiry alerts |
 | Insight | Dashboard, reports (patients, revenue, treatments, stock, staff productivity), CSV export with UTF-8 BOM |
-| People | Staff and user accounts, seven built-in roles plus custom roles, 67 granular permissions enforced in business logic |
+| People | Staff and user accounts, seven built-in roles plus custom roles, 68 granular permissions enforced in business logic |
 | Accountability | Audit log of every write, automatic lock after inactivity, backups with restore history |
 | Documents | A4, A5, 58 mm and 80 mm thermal, mini and custom paper sizes; on-screen preview, printer selection, and offline PDF |
 | Data safety | Backup and restore with pre-restore snapshot, validation, rollback and retention |

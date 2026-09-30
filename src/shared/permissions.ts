@@ -119,6 +119,7 @@ export const PERMISSIONS: readonly PermissionDef[] = [
   perm('backups', 'configure', 'Configure backups', 'Set backup folder, schedule and retention'),
 
   perm('reports', 'view', 'View reports', 'Open operational and clinical reports'),
+  perm('reports', 'financial', 'View financial reports', 'Open revenue, expense, dues and stock-value reports'),
 
   perm('data', 'export', 'Export data', 'Export data sets for external use'),
   perm('data', 'import', 'Import data', 'Import patient and item data from CSV'),
@@ -242,6 +243,7 @@ export const DEFAULT_ROLES: readonly RoleDefinition[] = [
       'accounting.reports',
       'accounting.export',
       'reports.view',
+      'reports.financial',
       'data.export',
       'printing.print'
     ]

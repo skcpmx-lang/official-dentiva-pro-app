@@ -57,7 +57,7 @@ interface PrescriptionRow {
   visit_id: number | null
   prescription_at: number
   prescription_date: string
-  age_snapshot: number | null
+  age_snapshot: number | string | null
   diagnosis: string | null
   cc_text: string | null
   oe_text: string | null
@@ -176,6 +176,22 @@ function mapMedicines(ctx: ServiceContext, prescriptionId: number): MedicineReco
   })) as MedicineRecord[]
 }
 
+/**
+ * The age recorded on the day the prescription was written, so a reprint shows the age the patient had
+ * then rather than today's.
+ *
+ * The column was declared TEXT when the schema was first written, and SQLite stores a number in a TEXT
+ * column as text — it then came back as a string, which the channel contract refused ("expected number,
+ * received string"). The column is INTEGER now, and this conversion keeps a database created by an
+ * earlier build of this version readable.
+ */
+function snapshotAge(value: number | string | null): number | null {
+  if (value === null) return null
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export function getPrescription(ctx: ServiceContext, id: number): PrescriptionRecord {
   assertPermission(ctx, 'prescriptions.view')
   const row = ctx.db.prepare('SELECT * FROM prescriptions WHERE id = ? AND is_deleted = 0').get(id) as PrescriptionRow | undefined
@@ -189,7 +205,7 @@ export function getPrescription(ctx: ServiceContext, id: number): PrescriptionRe
     patientCode: patient.code,
     patientName: patient.name,
     patientNameBn: patient.nameBn,
-    patientAgeYears: row.age_snapshot ?? patient.ageYears,
+    patientAgeYears: snapshotAge(row.age_snapshot) ?? patient.ageYears,
     patientGender: patient.gender,
     patientPhone: patient.phone,
     dentistId: row.dentist_id,

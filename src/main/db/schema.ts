@@ -8,7 +8,7 @@
  *  · every searchable text column has a `*_fold` companion produced by `foldForSearch()`
  */
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 export const SCHEMA_V1_SQL = /* sql */ `
 ------------------------------------------------------------------------------
@@ -459,7 +459,7 @@ CREATE TABLE IF NOT EXISTS prescriptions (
   visit_id          INTEGER REFERENCES visits(id) ON DELETE SET NULL ON UPDATE CASCADE,
   prescription_at   INTEGER NOT NULL,
   prescription_date TEXT NOT NULL,
-  age_snapshot      TEXT,
+  age_snapshot      INTEGER,
   diagnosis         TEXT,
   cc_text           TEXT,
   oe_text           TEXT,

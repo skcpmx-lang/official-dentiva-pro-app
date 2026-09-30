@@ -6,6 +6,7 @@ import { archiveDentist, dentistsOnDuty, listDentists, saveDentist, setDentistAc
 import { batchesForItem, saveItem } from '@main/modules/inventory/items'
 import { safeJoin } from '@main/files/storage'
 import { createPracticeHandlers } from '@main/ipc/handlers/practice'
+import { reportCatalog, runReport } from '@main/modules/accounting/reports'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
 /**
@@ -134,6 +135,24 @@ describe('authorisation of privileged writes', () => {
     // The clerk who issues stock sees the same batches even without `inventory.view`.
     expect(permissionOf(() => batchesForItem(harness.ctx(['inventory.adjust']), itemId))).toBeNull()
     expect(permissionOf(() => batchesForItem(harness.ctx(['inventory.view']), itemId))).toBeNull()
+  })
+})
+
+describe('report visibility', () => {
+  it('offers only the reports the operator may open, and refuses the rest on the channel', () => {
+    const operational = reportCatalog(harness.ctx(['reports.view']))
+    expect(operational.map((entry) => entry.key).sort()).toEqual(['appointment_stats', 'patient_growth'])
+
+    const accountant = reportCatalog(harness.ctx(['accounting.reports']))
+    expect(accountant).toHaveLength(10)
+
+    const financialOnly = reportCatalog(harness.ctx(['reports.financial']))
+    expect(financialOnly.length).toBe(8)
+    expect(financialOnly.every((entry) => entry.permission === 'reports.financial')).toBe(true)
+
+    // Seeing the button is not authorisation: running a hidden report is still refused.
+    expect(permissionOf(() => runReport(harness.ctx(['reports.view']), { key: 'profit_loss', limit: 10 } as never))).toBe('E_PERMISSION')
+    expect(permissionOf(() => reportCatalog(harness.ctx(['patients.view'])))).toBe('E_PERMISSION')
   })
 })
 

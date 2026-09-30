@@ -2,6 +2,25 @@ import { _electron as electron, expect, type ElectronApplication, type Page } fr
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import {
+  ADMIN,
+  CLINIC,
+  DENTIST,
+  E2E_ACTIVATION_CODE,
+  administratorStepPayload,
+  appointmentPayload,
+  clinicStepPayload,
+  dentistStepPayload,
+  inventoryItemPayload,
+  invoicePayload,
+  patientPayload,
+  paymentPayload,
+  preferencesStepPayload,
+  prescriptionPayload,
+  setupCompletePayload,
+  visitPayload,
+  visitTreatmentPayload
+} from './scenario'
 
 /**
  * Shared harness for the end-to-end workflows.
@@ -24,29 +43,7 @@ import { join, resolve } from 'node:path'
  * transition) is the production one.
  */
 
-export const E2E_ACTIVATION_CODE = '0000-0000-0000-0001'
-
-export const CLINIC = {
-  name: 'Tangail Dental Care',
-  nameBn: 'টাঙ্গাইল ডেন্টাল কেয়ার',
-  address: 'Victoria Road, Tangail',
-  phone: '01711000000',
-  openingTime: '09:00',
-  closingTime: '20:00'
-} as const
-
-export const ADMIN = {
-  fullName: 'Shohan Khan',
-  username: 'admin.dentiva',
-  password: 'Dentiva#2026'
-} as const
-
-export const DENTIST = {
-  fullName: 'Dr. Ayesha Rahman',
-  fullNameBn: 'ডা. আয়েশা রহমান',
-  registrationNo: 'BMDC-12345',
-  signatureLabel: 'Consultant Dental Surgeon'
-} as const
+export { ADMIN, CLINIC, DENTIST, E2E_ACTIVATION_CODE }
 
 export interface Clinic {
   app: ElectronApplication
@@ -57,7 +54,7 @@ export interface Clinic {
 interface Envelope<T> {
   ok: boolean
   data?: T
-  error?: { code?: string, message?: string }
+  error?: { code?: string, message?: string, detail?: Record<string, unknown> }
 }
 
 /** Today in the clinic's local calendar, in the `YYYY-MM-DD` the contracts use. */
@@ -129,7 +126,10 @@ export async function invoke<T = unknown>(page: Page, channel: string, payload: 
   )) as Envelope<T>
 
   if (!envelope.ok) {
-    const error = new Error(`${channel} failed: ${envelope.error?.code ?? 'E_UNKNOWN'} ${envelope.error?.message ?? ''}`)
+    // The diagnostic detail (validation issue paths, permission names) is appended so a failed
+    // annotation in CI names the offending field instead of only the generic message.
+    const detail = envelope.error?.detail ? ` — ${JSON.stringify(envelope.error.detail)}` : ''
+    const error = new Error(`${channel} failed: ${envelope.error?.code ?? 'E_UNKNOWN'} ${envelope.error?.message ?? ''}${detail}`)
     Object.assign(error, { code: envelope.error?.code })
     throw error
   }
@@ -194,6 +194,8 @@ export async function completeSetupThroughUi(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Finish setup' }).click()
   const confirmation = page.getByRole('dialog', { name: 'Finish setup and open Dentiva Pro?' })
   await expect(confirmation).toBeVisible()
+  /* Setup is confirmed by typing the clinic name, exactly as an operator would. */
+  await confirmation.getByLabel('Confirmation phrase').fill(CLINIC.name)
   await confirmation.getByRole('button', { name: 'Finish setup' }).click()
 
   await expect(page.locator('#username')).toBeVisible({ timeout: 60_000 })
@@ -225,51 +227,12 @@ export async function prepareClinic(page: Page, options: { throughUi?: boolean }
     await page.waitForLoadState('domcontentloaded')
   }
   if ((await bootstrapStage(page)) === 'setup') {
-    await invoke(page, 'setup.clinic', {
-      name: CLINIC.name,
-      nameBn: CLINIC.nameBn,
-      logoPath: null,
-      address: CLINIC.address,
-      addressBn: null,
-      phone: CLINIC.phone,
-      altPhone: null,
-      email: null,
-      website: null,
-      openingTime: CLINIC.openingTime,
-      closingTime: CLINIC.closingTime,
-      weeklyClosedDays: [5],
-      footerMessage: null,
-      invoiceFooter: null,
-      prescriptionFooter: null,
-      emergencyInstruction: null
-    })
-    await invoke(page, 'setup.dentists', {
-      dentists: [
-        {
-          fullName: DENTIST.fullName,
-          fullNameBn: DENTIST.fullNameBn,
-          phone: null,
-          email: null,
-          registrationNo: DENTIST.registrationNo,
-          signatureLabel: DENTIST.signatureLabel,
-          color: null,
-          isActive: true,
-          sortOrder: 1,
-          designations: ['BDS', 'MDS (Orthodontics)'],
-          qualifications: [],
-          schedules: []
-        }
-      ]
-    })
-    await invoke(page, 'setup.administrator', {
-      fullName: ADMIN.fullName,
-      username: ADMIN.username,
-      password: ADMIN.password,
-      confirmPassword: ADMIN.password,
-      dentistId: null
-    })
-    await invoke(page, 'setup.preferences', { values: {} })
-    await invoke(page, 'setup.complete', { confirmation: 'COMPLETE SETUP' })
+    await invoke(page, 'setup.clinic', clinicStepPayload())
+    await invoke(page, 'setup.dentists', dentistStepPayload())
+    await invoke(page, 'setup.administrator', administratorStepPayload())
+    await invoke(page, 'setup.preferences', preferencesStepPayload())
+    /* Setup is confirmed with the clinic name, exactly as the wizard's dialog requires. */
+    await invoke(page, 'setup.complete', setupCompletePayload())
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
   }
@@ -304,160 +267,37 @@ export async function firstDentistId(page: Page): Promise<number> {
 }
 
 export async function seedPatient(page: Page, overrides: Record<string, unknown> = {}): Promise<SeededPatient> {
-  const patient = await invoke<{ id: number, fullName: string, code: string }>(page, 'patients.save', {
-    fullName: 'Rakib Hasan',
-    fullNameBn: 'রাকিব হাসান',
-    dob: null,
-    ageYears: 34,
-    gender: 'male',
-    bloodGroup: null,
-    phone: '01712345678',
-    altPhone: null,
-    emergencyPhone: null,
-    address: 'House 12, Victoria Road',
-    addressBn: 'বাড়ি ১২, ভিক্টোরিয়া রোড',
-    city: 'Tangail',
-    occupation: null,
-    maritalStatus: null,
-    chiefComplaint: null,
-    pastHistory: null,
-    allergies: null,
-    medicalHistory: null,
-    dentalHistory: null,
-    currentMedications: null,
-    notes: null,
-    tags: [],
-    status: 'active',
-    ...overrides
-  })
+  const patient = await invoke<{ id: number, fullName: string, code: string }>(page, 'patients.save', patientPayload(overrides))
   return { id: patient.id, fullName: patient.fullName, code: patient.code }
 }
 
 export async function seedVisit(page: Page, patientId: number, dentistId: number, treatmentName = 'Root canal treatment'): Promise<number> {
-  const visit = await invoke<{ id: number }>(page, 'visits.save', {
-    patientId,
-    dentistId,
-    appointmentId: null,
-    visitAt: Date.now(),
-    chiefComplaint: 'Pain in the lower right molar',
-    examination: 'Deep caries on 46, tender on percussion',
-    diagnosis: 'Irreversible pulpitis',
-    advice: 'Warm saline rinse',
-    treatmentPlan: 'Root canal treatment',
-    status: 'final'
-  })
-  await invoke(page, 'visits.treatments.add', {
-    visitId: visit.id,
-    treatmentId: null,
-    treatmentName,
-    toothCodes: ['46'],
-    quantity: 1,
-    unitPriceMicro: 900_000,
-    discountMicro: 0,
-    status: 'completed'
-  })
+  const visit = await invoke<{ id: number }>(page, 'visits.save', visitPayload(patientId, dentistId))
+  await invoke(page, 'visits.treatments.add', visitTreatmentPayload(visit.id, treatmentName))
   return visit.id
 }
 
 export async function seedPrescription(page: Page, patientId: number, dentistId: number, visitId: number | null = null): Promise<number> {
-  const prescription = await invoke<{ id: number }>(page, 'prescriptions.save', {
-    patientId,
-    dentistId,
-    visitId,
-    prescriptionAt: Date.now(),
-    diagnosis: 'Acute pulpitis',
-    ccText: 'Pain on chewing for three days',
-    oeText: 'Tender on percussion, deep caries 46',
-    advice: 'Avoid cold drinks for a week',
-    medicines: [
-      {
-        sortOrder: 1,
-        medicineName: 'Amoxicillin 500 mg',
-        form: 'capsule',
-        strength: '500 mg',
-        unit: null,
-        doseMorning: '1',
-        doseAfternoon: null,
-        doseNight: '1',
-        timing: 'after_meal',
-        frequency: '1+0+1',
-        durationDays: 5,
-        durationText: null,
-        quantity: '10',
-        isPrn: false,
-        instructions: null
-      }
-    ]
-  })
+  const prescription = await invoke<{ id: number }>(page, 'prescriptions.save', prescriptionPayload(patientId, dentistId, visitId))
   return prescription.id
 }
 
 export async function seedInvoice(page: Page, patientId: number, unitPriceMicro = 900_000): Promise<{ id: number, invoiceNo: string, totalMicro: number }> {
-  const invoice = await invoke<{ id: number, invoiceNo: string, totalMicro: number }>(page, 'invoices.save', {
-    patientId,
-    visitId: null,
-    appointmentId: null,
-    issueAt: Date.now(),
-    dueDate: null,
-    discountBp: 0,
-    notes: null,
-    lines: [
-      {
-        treatmentId: null,
-        visitTreatmentId: null,
-        description: 'Root canal treatment',
-        toothCodes: ['46'],
-        quantity: 1,
-        unitPriceMicro,
-        discountMicro: 0
-      }
-    ]
-  })
+  const invoice = await invoke<{ id: number, invoiceNo: string, totalMicro: number }>(page, 'invoices.save', invoicePayload(patientId, unitPriceMicro))
   return { id: invoice.id, invoiceNo: invoice.invoiceNo, totalMicro: invoice.totalMicro }
 }
 
 export async function seedPayment(page: Page, patientId: number, invoiceId: number, amountMicro: number, method = 'cash'): Promise<void> {
-  await invoke(page, 'payments.add', {
-    patientId,
-    invoiceId,
-    kind: 'payment',
-    amountMicro,
-    method,
-    reference: null,
-    paidAt: Date.now(),
-    notes: null
-  })
+  await invoke(page, 'payments.add', paymentPayload(patientId, invoiceId, amountMicro, method))
 }
 
 export async function seedAppointment(page: Page, patientId: number, dentistId: number, scheduledAt: number): Promise<number> {
-  const appointment = await invoke<{ id: number }>(page, 'appointments.save', {
-    patientId,
-    dentistId,
-    scheduledAt,
-    durationMin: 30,
-    reason: 'Toothache',
-    notes: null,
-    status: 'scheduled'
-  })
+  const appointment = await invoke<{ id: number }>(page, 'appointments.save', appointmentPayload(patientId, dentistId, scheduledAt))
   return appointment.id
 }
 
 export async function seedInventoryItem(page: Page, overrides: Record<string, unknown> = {}): Promise<number> {
-  const item = await invoke<{ id: number }>(page, 'inventory.save', {
-    code: null,
-    name: 'Composite filling material',
-    category: 'restorative',
-    unit: 'box',
-    supplierId: null,
-    purchasePriceMicro: 250_000,
-    sellingPriceMicro: 400_000,
-    reorderLevel: 10,
-    expiryTracking: false,
-    location: null,
-    notes: null,
-    isActive: true,
-    ...overrides
-  })
+  const item = await invoke<{ id: number }>(page, 'inventory.save', inventoryItemPayload(overrides))
   return item.id
 }
 

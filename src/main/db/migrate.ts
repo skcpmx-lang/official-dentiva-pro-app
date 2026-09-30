@@ -1,4 +1,5 @@
 import type { Db } from './connection'
+import { DEFAULT_TOOTH_CONDITIONS } from '@shared/dental'
 import {SCHEMA_V1_POST_SQL, SCHEMA_V1_SQL, SCHEMA_V2_SQL } from './schema'
 
 export interface Migration {
@@ -34,6 +35,18 @@ export const MIGRATIONS: Migration[] = [
       addColumnIfMissing(db, 'print_history', 'payload_path', 'TEXT')
       addColumnIfMissing(db, 'print_history', 'file_path', 'TEXT')
       db.exec(SCHEMA_V2_SQL)
+    }
+  },
+  {
+    version: 3,
+    description: 'Dental chart: seeded conditions record their kind (finding/treatment/state)',
+    up(db: Db): void {
+      // The first build wrote the single category `tooth_condition` for every seeded condition, while
+      // the chart contract and the screen group conditions by kind. Only tooth-vocabulary rows still
+      // carrying that legacy value are corrected, so a clinic that renamed or archived a condition
+      // keeps its data and the prescription vocabulary is untouched.
+      const update = db.prepare('UPDATE clinical_findings SET category = ? WHERE code = ? AND category = ? AND applies_tooth = 1')
+      for (const condition of DEFAULT_TOOTH_CONDITIONS) update.run(condition.kind, condition.code, 'tooth_condition')
     }
   }
 ]

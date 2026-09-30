@@ -36,7 +36,9 @@ describe('database bootstrap', () => {
       const findingCategories = (
         db.prepare('SELECT DISTINCT category FROM clinical_findings ORDER BY category').all() as Array<{ category: string }>
       ).map((row) => row.category)
-      expect(findingCategories).toEqual(expect.arrayContaining(['cc', 'oe', 'advice', 'tooth_condition']))
+      // The prescription vocabulary (chief complaints, examination notes, advice) shares this table
+      // with the dental conditions, whose category is the kind the chart groups by.
+      expect(findingCategories).toEqual(expect.arrayContaining(['cc', 'oe', 'advice', 'finding', 'treatment', 'state']))
 
       const profileCount = (db.prepare('SELECT COUNT(*) AS count FROM print_profiles').get() as { count: number }).count
       expect(profileCount).toBeGreaterThanOrEqual(10)

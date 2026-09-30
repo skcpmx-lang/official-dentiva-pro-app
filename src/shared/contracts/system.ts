@@ -118,7 +118,18 @@ export const zClinicProfileInput = z.object({
   emergencyInstruction: zOptionalText(400)
 })
 
-export const zClinicProfile = zClinicProfileInput.extend({ weeklyClosedDays: z.array(z.number()), logoPath: z.string().nullable() })
+/**
+ * The clinic profile as it travels *out* of the main process.
+ *
+ * Deliberately looser than the input: `app.bootstrap` answers before the setup wizard has run, when the
+ * clinic row exists but its name is still empty, so the output schema must not impose the ≥2 character
+ * rule that protects `settings.updateClinic`. Saving still validates through `zClinicProfileInput`.
+ */
+export const zClinicProfile = zClinicProfileInput.extend({
+  name: z.string().max(120),
+  weeklyClosedDays: z.array(z.number()),
+  logoPath: z.string().nullable()
+})
 
 export const zSetupStatus = z.object({
   activated: z.boolean(),
