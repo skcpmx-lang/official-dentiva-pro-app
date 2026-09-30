@@ -3,6 +3,8 @@
 Status legend: ✅ implemented & tested · ⏳ in progress · ❌ not satisfied.
 "Spec §" refers to the master production build specification sections.
 Source paths are relative to the repository root; test paths are relative to `tests/`.
+On a ✅ row the Test column names evidence that exists and passes today; on a ⏳ row it names the
+evidence still to be produced (the file may not exist yet) — the row stays ⏳ until it does.
 Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`).
 
 ## A. Foundation
