@@ -23,6 +23,8 @@ import { PrescriptionListScreen } from './features/clinical/PrescriptionListScre
 import { PrescriptionScreen } from './features/clinical/PrescriptionScreen'
 import { AppointmentsScreen } from './features/scheduling/AppointmentsScreen'
 import { QueueScreen } from './features/scheduling/QueueScreen'
+import { InvoiceListScreen } from './features/billing/InvoiceListScreen'
+import { InvoiceScreen } from './features/billing/InvoiceScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { DentistsScreen } from './features/settings/DentistsScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
@@ -64,6 +66,9 @@ export function App(): ReactNode {
                 { path: 'patients/new', element: <PermissionRoute permission="patients.create"><PatientFormScreen mode="create" /></PermissionRoute> },
                 { path: 'patients/:patientId', element: <PermissionRoute permission="patients.view"><PatientProfileScreen /></PermissionRoute> },
                 { path: 'patients/:patientId/edit', element: <PermissionRoute permission="patients.edit"><PatientFormScreen mode="edit" /></PermissionRoute> },
+                { path: 'invoices', element: <PermissionRoute permission="billing.view"><InvoiceListScreen /></PermissionRoute> },
+                { path: 'invoices/new', element: <PermissionRoute permission="billing.create"><InvoiceScreen /></PermissionRoute> },
+                { path: 'invoices/:invoiceId', element: <PermissionRoute permission="billing.view"><InvoiceScreen /></PermissionRoute> },
                 { path: 'appointments', element: <PermissionRoute permission="appointments.view"><AppointmentsScreen /></PermissionRoute> },
                 { path: 'queue', element: <PermissionRoute permission="queue.view"><QueueScreen /></PermissionRoute> },
                 { path: 'visits', element: <PermissionRoute permission="clinical.view"><VisitListScreen /></PermissionRoute> },

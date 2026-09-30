@@ -55,10 +55,10 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 
 | Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
 |---|---|---|---|---|---|---|
-| REQ-040 | §43,§44 | Invoices (lines, discount, statuses, paper-aware printing) | Billing | `src/main/modules/invoices/**` | E2E-04, `tests/integration/invoices.test.ts` | ⏳ |
-| REQ-041 | §45 | Payments with methods, allocation, references | Billing | `src/main/modules/payments/**` | E2E-04, `tests/integration/payments.test.ts` | ⏳ |
-| REQ-042 | §46,§75 | Payment reporting & filters with RBAC | Billing | `src/main/modules/reports/**` | `tests/integration/reports.test.ts` | ⏳ |
-| REQ-043 | §94 | Void/reversal instead of destructive financial edits | Billing | `invoices/service.ts` (void), `payments/service.ts` (void/refund) | `tests/integration/void.test.ts` | ⏳ |
+| REQ-040 | §43,§44 | Invoices (lines, discount, statuses, paper-aware printing) | Billing | `src/main/modules/billing/invoices.ts`, `features/billing/{InvoiceListScreen,InvoiceScreen}.tsx`; paper-aware printing pending | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ⏳ |
+| REQ-041 | §45 | Payments with methods, allocation, references | Billing | `src/main/modules/billing/payments.ts` (9 record categories, references, overpayment and refund guards) | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ✅ |
+| REQ-042 | §46,§75 | Payment reporting & filters with RBAC | Billing | `billing/payments.ts` (`listPayments`, `dailyCollections`), `invoices.list` aggregate totals; the reports module still owns the printed/exported report set | `tests/integration/billing.test.ts` | ⏳ |
+| REQ-043 | §94 | Void/reversal instead of destructive financial edits | Billing | `invoices.ts` (`voidInvoice` blocked while payments exist, delete limited to unpaid/void), `payments.ts` (void keeps the receipt marked void + writes a linked reversal and recomputes); expense void arrives with accounting | `tests/integration/billing.test.ts` | ⏳ |
 | REQ-044 | §47,§48 | Inventory items, batches, ledger movements, alerts | Inventory | `src/main/modules/inventory/**` | E2E-06, `tests/integration/inventory.test.ts` | ⏳ |
 | REQ-045 | §49 | Suppliers with purchase history | Inventory | `src/main/modules/suppliers/**` | `tests/integration/suppliers.test.ts` | ⏳ |
 | REQ-046 | §50,§51 | Accounting income/expense + reports + exports | Accounting | `src/main/modules/accounting/**`, `reports/**` | E2E-07 | ⏳ |
@@ -99,8 +99,8 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 |---|---|---|---|
 | ADD-01 | Patient code format `DP-YYMM-####` with per-month counters | Patients | ⏳ |
 | ADD-02 | Dentist schedules driving appointment slots | Scheduling | ⏳ |
-| ADD-03 | Configurable invoice numbering prefix/sequence | Billing | ⏳ |
-| ADD-04 | Void/reversal semantics for invoices, payments, expenses | Billing/Accounting | ⏳ |
+| ADD-03 | Configurable invoice numbering prefix/sequence | Billing | ⏳ (fixed `INV-YYMM-NNNN` sequence from `db/counters.ts`; prefix configuration lands with settings) |
+| ADD-04 | Void/reversal semantics for invoices, payments, expenses | Billing/Accounting | ⏳ (invoices + payments done and tested; expenses pending accounting) |
 | ADD-05 | Aged receivables buckets (0-30/31-60/61-90/90+) | Reports | ⏳ |
 | ADD-06 | Treatment revenue + dentist productivity report | Reports | ⏳ |
 | ADD-07 | Stock valuation + purchase expenditure report | Inventory/Reports | ⏳ |
@@ -120,6 +120,6 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | ADD-21 | Referral follow-up tracking | Clinical | ⏳ |
 | ADD-22 | Queue discipline without orphan rows | Scheduling | ⏳ |
 | ADD-23 | Prescription templates (favourite sets) | Prescriptions | ⏳ |
-| ADD-24 | Role-based discount limits enforced in service | Billing | ⏳ |
+| ADD-24 | Role-based discount limits enforced in service | Billing | ✅ `discountLimitFor` + `billing.discount_override`; asserted in `tests/integration/billing.test.ts` |
 | ADD-25 | Patient CSV import with preview + transaction | Data | ⏳ |
 | ADD-26 | Accessibility/reduced-motion setting | UI | ⏳ |

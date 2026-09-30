@@ -5,6 +5,7 @@ import { createPracticeHandlers } from '@main/ipc/handlers/practice'
 import { createPatientHandlers } from '@main/ipc/handlers/patients'
 import { createClinicalHandlers } from '@main/ipc/handlers/clinical'
 import { createSchedulingHandlers } from '@main/ipc/handlers/scheduling'
+import { createBillingHandlers } from '@main/ipc/handlers/billing'
 import { createDashboardHandlers } from '@main/ipc/handlers/dashboard'
 import type { HandlerDeps } from '@main/ipc/handlers/system'
 
@@ -40,6 +41,7 @@ function collectHandlers(): Set<string> {
     createPatientHandlers(deps),
     createClinicalHandlers(deps),
     createSchedulingHandlers(deps),
+    createBillingHandlers(deps),
     createDashboardHandlers()
   ]
   const keys = new Set<string>()
@@ -109,6 +111,14 @@ describe('IPC channel registry', () => {
         'appointments.slots'
       ])
     )
+
+    const invoices = Object.keys(CHANNELS).filter((channel) => channel.startsWith('invoices.'))
+    expect(invoices).toEqual(
+      expect.arrayContaining(['invoices.list', 'invoices.get', 'invoices.save', 'invoices.void', 'invoices.delete', 'invoices.billable', 'invoices.forVisit', 'invoices.export'])
+    )
+
+    const payments = Object.keys(CHANNELS).filter((channel) => channel.startsWith('payments.'))
+    expect(payments).toEqual(expect.arrayContaining(['payments.list', 'payments.add', 'payments.void', 'payments.export']))
 
     const queue = Object.keys(CHANNELS).filter((channel) => channel.startsWith('queue.'))
     expect(queue).toEqual(expect.arrayContaining(['queue.board', 'queue.add', 'queue.setStatus', 'queue.remove']))

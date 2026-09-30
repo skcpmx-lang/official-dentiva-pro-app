@@ -83,3 +83,15 @@ export type AppointmentStatus = Appointment['status']
 export type QueueEntry = ChannelOutput<'queue.board'>['items'][number]
 export type QueueBoard = ChannelOutput<'queue.board'>
 export type QueueStatus = QueueEntry['status']
+
+/* ------------------------------------------------------------------- billing */
+
+export type Invoice = ChannelOutput<'invoices.get'>
+export type InvoiceListItem = ChannelOutput<'invoices.list'>['items'][number]
+export type InvoiceInput = InputOf<'invoices.save'>
+export type InvoiceLineInput = InputOf<'invoices.save'>['lines'][number]
+export type InvoiceFilterInput = InputOf<'invoices.list'>
+export type BillableLine = ChannelOutput<'invoices.billable'>[number]
+export type Payment = ChannelOutput<'payments.list'>['items'][number]
+export type PaymentInput = InputOf<'payments.add'>
+export type PaymentFilterInput = InputOf<'payments.list'>

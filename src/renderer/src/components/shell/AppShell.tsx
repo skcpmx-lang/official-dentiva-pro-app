@@ -6,6 +6,7 @@ import {
   CalendarClock,
   Cog,
   ListOrdered,
+  Receipt,
   Info,
   LayoutDashboard,
   Lock,
@@ -67,6 +68,10 @@ const NAV_SECTIONS: NavSection[] = [
       { to: '/treatments', label: 'Treatments', icon: <Tags size={18} />, permission: 'clinical.view' },
       { to: '/settings/dentists', label: 'Dentists', icon: <Stethoscope size={18} />, permission: 'settings.view' }
     ]
+  },
+  {
+    title: 'Money',
+    entries: [{ to: '/invoices', label: 'Invoices', icon: <Receipt size={18} />, permission: 'billing.view' }]
   },
   {
     title: 'Administration',
