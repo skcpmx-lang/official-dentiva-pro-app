@@ -59,8 +59,8 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | REQ-041 | §45 | Payments with methods, allocation, references | Billing | `src/main/modules/billing/payments.ts` (9 record categories, references, overpayment and refund guards) | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ✅ |
 | REQ-042 | §46,§75 | Payment reporting & filters with RBAC | Billing | `billing/payments.ts` (`listPayments`, `dailyCollections`), `invoices.list` aggregate totals; the reports module still owns the printed/exported report set | `tests/integration/billing.test.ts` | ⏳ |
 | REQ-043 | §94 | Void/reversal instead of destructive financial edits | Billing | `invoices.ts` (`voidInvoice` blocked while payments exist, delete limited to unpaid/void), `payments.ts` (void keeps the receipt marked void + writes a linked reversal and recomputes); expense void arrives with accounting | `tests/integration/billing.test.ts` | ⏳ |
-| REQ-044 | §47,§48 | Inventory items, batches, ledger movements, alerts | Inventory | `src/main/modules/inventory/**` | E2E-06, `tests/integration/inventory.test.ts` | ⏳ |
-| REQ-045 | §49 | Suppliers with purchase history | Inventory | `src/main/modules/suppliers/**` | `tests/integration/suppliers.test.ts` | ⏳ |
+| REQ-044 | §47,§48 | Inventory items, batches, ledger movements, alerts | Inventory | `src/main/modules/inventory/{items,movements,purchases,suppliers}.ts` + `ipc/handlers/inventory.ts` (24 channels) + `features/inventory/**`: append-only ledger, batch/expiry tracking with FEFO issue, low-stock and expiry worklists, movement reversal | `tests/integration/inventory.test.ts`, `tests/renderer/inventory-ui.test.tsx` | ✅ |
+| REQ-045 | §49 | Suppliers with purchase history | Inventory | `inventory/suppliers.ts` + `inventory/purchases.ts`: supplier roll-ups (purchase count, spend, owed) read from the purchases, receipts that write batches and movements in one transaction, part-payment tracking, CSV export | `tests/integration/inventory.test.ts`, `tests/renderer/inventory-ui.test.tsx` | ✅ |
 | REQ-046 | §50,§51 | Accounting income/expense + reports + exports | Accounting | `src/main/modules/accounting/**`, `reports/**` | E2E-07 | ⏳ |
 | REQ-047 | §52,§53 | Staff records & user accounts | Admin | `src/main/modules/staff/**`, `users/**` | `tests/integration/users.test.ts` | ⏳ |
 | REQ-048 | §54 | Roles & permission matrix incl. custom roles | Admin | `src/main/modules/roles/**`, `features/admin/RolesScreen.tsx` | `tests/integration/roles.test.ts` | ⏳ |
@@ -103,7 +103,7 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | ADD-04 | Void/reversal semantics for invoices, payments, expenses | Billing/Accounting | ⏳ (invoices + payments done and tested; expenses pending accounting) |
 | ADD-05 | Aged receivables buckets (0-30/31-60/61-90/90+) | Reports | ⏳ |
 | ADD-06 | Treatment revenue + dentist productivity report | Reports | ⏳ |
-| ADD-07 | Stock valuation + purchase expenditure report | Inventory/Reports | ⏳ |
+| ADD-07 | Stock valuation + purchase expenditure report | Inventory/Reports | ⏳ (stock value and purchase spend are computed and shown; the printed/exported report set arrives with reports) |
 | ADD-08 | Permission-aware CSV/PDF export per module | Data | ⏳ |
 | ADD-09 | Documented data directory & uninstall behaviour | Release | ⏳ |
 | ADD-10 | Recovery mode on DB failure | Platform | ⏳ |

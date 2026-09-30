@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarClock, Cog, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Receipt, ScrollText, Search, Tags, UserCog, Users } from 'lucide-react'
+import { ArrowRight, Boxes, CalendarClock, Cog, LayoutDashboard, ListOrdered, Lock, LogOut, Pill, Receipt, ScrollText, Search, Tags, Truck, UserCog, Users } from 'lucide-react'
 import { useAppStore, usePermission } from '../../store/appStore'
 import { Modal } from '../ui/overlay'
 import { invoke } from '../../lib/api'
@@ -89,6 +89,8 @@ export function CommandPalette(): ReactNode {
       { id: 'treatments', label: 'Go to the treatment catalogue', icon: <Tags size={16} />, permission: 'clinical.view', run: () => navigate('/treatments') },
       { id: 'invoices', label: 'Go to invoices', icon: <Receipt size={16} />, permission: 'billing.view', run: () => navigate('/invoices') },
       { id: 'dues', label: 'Show invoices with dues', icon: <Receipt size={16} />, permission: 'billing.view', run: () => navigate('/invoices?hasDue=1') },
+      { id: 'inventory', label: 'Go to inventory', icon: <Boxes size={16} />, permission: 'inventory.view', run: () => navigate('/inventory') },
+      { id: 'suppliers', label: 'Go to suppliers and purchases', icon: <Truck size={16} />, permission: 'suppliers.view', run: () => navigate('/inventory/suppliers') },
       { id: 'users', label: 'Go to users', icon: <UserCog size={16} />, permission: 'users.view', run: () => navigate('/settings/users') },
       { id: 'settings', label: 'Go to settings', icon: <Cog size={16} />, permission: 'settings.view', run: () => navigate('/settings') },
       { id: 'audit', label: 'Go to the audit log', icon: <ScrollText size={16} />, permission: 'audit.view', run: () => navigate('/audit') },

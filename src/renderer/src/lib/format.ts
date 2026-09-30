@@ -151,6 +151,47 @@ export function treatmentCategoryLabel(value: string): string {
   return TREATMENT_CATEGORIES.find((category) => category.value === value)?.label ?? value
 }
 
+export const INVENTORY_CATEGORIES = [
+  { value: 'consumable', label: 'Consumable' },
+  { value: 'restorative', label: 'Restorative' },
+  { value: 'endodontic', label: 'Endodontic' },
+  { value: 'prosthetic', label: 'Prosthetic' },
+  { value: 'orthodontic', label: 'Orthodontic' },
+  { value: 'instrument', label: 'Instrument' },
+  { value: 'sterilisation', label: 'Sterilisation' },
+  { value: 'pharmaceutical', label: 'Pharmaceutical' },
+  { value: 'office', label: 'Office' },
+  { value: 'general', label: 'General' }
+] as const
+
+export function inventoryCategoryLabel(value: string): string {
+  return INVENTORY_CATEGORIES.find((category) => category.value === value)?.label ?? value
+}
+
+/** Movement vocabulary: label plus whether it adds to or subtracts from stock. */
+export const MOVEMENT_TYPE_META: Record<string, { label: string, direction: 'in' | 'out' }> = {
+  opening: { label: 'Opening stock', direction: 'in' },
+  purchase: { label: 'Purchase received', direction: 'in' },
+  return_in: { label: 'Returned to stock', direction: 'in' },
+  adjustment_in: { label: 'Count correction (in)', direction: 'in' },
+  usage: { label: 'Issued for treatment', direction: 'out' },
+  adjustment_out: { label: 'Count correction (out)', direction: 'out' },
+  expired: { label: 'Expired write-off', direction: 'out' },
+  damaged: { label: 'Damaged write-off', direction: 'out' },
+  return_out: { label: 'Returned to supplier', direction: 'out' }
+}
+
+export function movementTypeLabel(value: string): string {
+  return MOVEMENT_TYPE_META[value]?.label ?? value
+}
+
+export const PURCHASE_STATUS_META: Record<string, { label: string, tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }> = {
+  unpaid: { label: 'Unpaid', tone: 'warning' },
+  partial: { label: 'Partly paid', tone: 'info' },
+  paid: { label: 'Paid', tone: 'success' },
+  void: { label: 'Void', tone: 'neutral' }
+}
+
 /** Presentation labels for the prescription medicine form and timing vocabularies. */
 export const MEDICINE_FORM_LABELS: Record<string, string> = {
   tablet: 'Tablet',

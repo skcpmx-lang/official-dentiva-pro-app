@@ -25,6 +25,9 @@ import { AppointmentsScreen } from './features/scheduling/AppointmentsScreen'
 import { QueueScreen } from './features/scheduling/QueueScreen'
 import { InvoiceListScreen } from './features/billing/InvoiceListScreen'
 import { InvoiceScreen } from './features/billing/InvoiceScreen'
+import { InventoryScreen } from './features/inventory/InventoryScreen'
+import { InventoryItemScreen } from './features/inventory/InventoryItemScreen'
+import { SuppliersScreen } from './features/inventory/SuppliersScreen'
 import { SettingsScreen } from './features/settings/SettingsScreen'
 import { DentistsScreen } from './features/settings/DentistsScreen'
 import { UsersScreen } from './features/settings/UsersScreen'
@@ -66,6 +69,9 @@ export function App(): ReactNode {
                 { path: 'patients/new', element: <PermissionRoute permission="patients.create"><PatientFormScreen mode="create" /></PermissionRoute> },
                 { path: 'patients/:patientId', element: <PermissionRoute permission="patients.view"><PatientProfileScreen /></PermissionRoute> },
                 { path: 'patients/:patientId/edit', element: <PermissionRoute permission="patients.edit"><PatientFormScreen mode="edit" /></PermissionRoute> },
+                { path: 'inventory', element: <PermissionRoute permission="inventory.view"><InventoryScreen /></PermissionRoute> },
+                { path: 'inventory/suppliers', element: <PermissionRoute permission="suppliers.view"><SuppliersScreen /></PermissionRoute> },
+                { path: 'inventory/:itemId', element: <PermissionRoute permission="inventory.view"><InventoryItemScreen /></PermissionRoute> },
                 { path: 'invoices', element: <PermissionRoute permission="billing.view"><InvoiceListScreen /></PermissionRoute> },
                 { path: 'invoices/new', element: <PermissionRoute permission="billing.create"><InvoiceScreen /></PermissionRoute> },
                 { path: 'invoices/:invoiceId', element: <PermissionRoute permission="billing.view"><InvoiceScreen /></PermissionRoute> },

@@ -95,3 +95,22 @@ export type BillableLine = ChannelOutput<'invoices.billable'>[number]
 export type Payment = ChannelOutput<'payments.list'>['items'][number]
 export type PaymentInput = InputOf<'payments.add'>
 export type PaymentFilterInput = InputOf<'payments.list'>
+
+/* ----------------------------------------------------------------- inventory */
+
+export type InventoryItem = ChannelOutput<'inventory.get'>['item']
+export type InventoryListItem = ChannelOutput<'inventory.list'>['items'][number]
+export type InventoryItemInput = InputOf<'inventory.save'>
+export type InventoryCategory = InventoryItemInput['category']
+export type InventoryDetail = ChannelOutput<'inventory.get'>
+export type InventoryBatch = InventoryDetail['batches'][number]
+export type StockMovement = InventoryDetail['movements'][number]
+export type MovementInput = InputOf<'inventory.movement.add'>
+export type MovementType = MovementInput['movementType']
+export type InventoryFilterInput = InputOf<'inventory.list'>
+export type Supplier = ChannelOutput<'suppliers.list'>[number]
+export type SupplierInput = InputOf<'suppliers.save'>
+export type Purchase = ChannelOutput<'purchases.get'>
+export type PurchaseListItem = ChannelOutput<'purchases.list'>['items'][number]
+export type PurchaseInput = InputOf<'purchases.save'>
+export type PurchaseLineInput = PurchaseInput['lines'][number]

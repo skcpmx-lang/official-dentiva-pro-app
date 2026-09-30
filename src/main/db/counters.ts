@@ -9,7 +9,7 @@ import { formatIdentifier, batchNumber, dayScope, periodScope } from '@shared/id
  * the pool instead of leaving a permanent gap in the label only (not in the data).
  */
 
-export type CounterName = 'patient' | 'visit' | 'prescription' | 'invoice' | 'receipt' | 'purchase' | 'accounting' | 'batch'
+export type CounterName = 'patient' | 'visit' | 'prescription' | 'invoice' | 'receipt' | 'purchase' | 'accounting' | 'batch' | 'item'
 
 export function nextSequence(db: Db, name: CounterName, scope: string): number {
   const row = db
@@ -43,6 +43,8 @@ export function nextCode(db: Db, name: CounterName, at: number, documentPrefix =
       return formatIdentifier({ prefix: 'ACC', date, sequence: nextSequence(db, name, periodScope(date)) })
     case 'batch':
       return batchNumber(date, nextSequence(db, name, dayScope(date)))
+    case 'item':
+      return formatIdentifier({ prefix: 'ITM', date, sequence: nextSequence(db, name, periodScope(date)) })
     default: {
       const exhaustive: never = name
       throw new Error(`Unsupported counter: ${String(exhaustive)}`)
