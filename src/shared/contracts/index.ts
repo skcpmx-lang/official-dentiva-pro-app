@@ -1,5 +1,6 @@
 import { systemChannels } from './system'
 import { practiceChannels } from './practice'
+import { dashboardChannels } from './dashboard'
 import { patientChannels } from './patients'
 
 /**
@@ -13,7 +14,8 @@ import { patientChannels } from './patients'
 export const CHANNELS = {
   ...systemChannels,
   ...practiceChannels,
-  ...patientChannels
+  ...patientChannels,
+  ...dashboardChannels
 } as const
 
 export type ChannelId = keyof typeof CHANNELS
@@ -23,3 +25,4 @@ export type ChannelOutput<C extends ChannelId> = import('zod').output<(typeof CH
 export * from './system'
 export * from './practice'
 export * from './patients'
+export * from './dashboard'

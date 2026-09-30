@@ -2,8 +2,8 @@ import type { ServiceContext } from '../../context'
 import { AppError } from '@shared/errors'
 import { activate, getActivationState, ACTIVATION_CODE_LENGTH_HINT } from '../../activation/service'
 import { getSetupStatus, getSetupSummary, saveAdministratorStep, saveClinicStep, saveDentistsStep, savePreferencesStep, completeSetup, resolveStage } from '../../modules/setup/service'
-import { getAllSettings, getClinicProfileSafe, getNumberSetting, getBooleanSetting } from '../../modules/settings/service'
-import { listAudit, auditFacets, auditEntryFor } from '../../modules/audit/service'
+import { getAllSettings, getClinicProfileSafe, getNumberSetting, getBooleanSetting, getDisplaySettings } from '../../modules/settings/service'
+import { listAudit, auditFacets, auditEntryFor, type AuditEntry } from '../../modules/audit/service'
 import { changeOwnPassword, login } from '../../modules/auth/service'
 import { deriveActor } from '../../modules/auth/actor'
 import { verifyPassword } from '../../auth/password'
@@ -13,6 +13,7 @@ import type { SessionManager } from '../../session/sessionManager'
 import type { HostServices } from '../../platform/types'
 import type { Db } from '../../db/connection'
 import type { Actor } from '@shared/permissions'
+import { exportStamp, writeCsv, type CsvColumn } from '../../files/csv'
 import { resolve as resolvePath, sep } from 'node:path'
 
 export interface HandlerDeps {
@@ -72,7 +73,9 @@ export function createSystemHandlers(deps: HandlerDeps): PartialHandlerMap {
       clinic: getClinicProfileSafe(ctx),
       activation: { ...getActivationState(ctx), codeHint: ACTIVATION_CODE_LENGTH_HINT },
       setup: getSetupStatus(ctx),
-      maintenanceMode: deps.isMaintenanceMode()
+      maintenanceMode: deps.isMaintenanceMode(),
+      settings: getDisplaySettings(ctx),
+      session: sessionSummary(ctx.webContentsId)
     }),
 
     'app.environment': (ctx) => ({
@@ -256,10 +259,41 @@ export function createSystemHandlers(deps: HandlerDeps): PartialHandlerMap {
 
     'audit.list': (ctx, input) => listAudit(ctx, input),
     'audit.facets': (ctx) => auditFacets(ctx),
+
+    'audit.export': async (ctx, input) => {
+      const page = listAudit(ctx, { ...input, limit: 5000, offset: 0 })
+      const target = await deps.host.dialogs.saveFile({
+        title: 'Export audit log',
+        defaultPath: `${deps.host.paths.exportsDir}/audit-log-${exportStamp(ctx.now())}.csv`,
+        filters: [{ name: 'CSV file', extensions: ['csv'] }]
+      })
+      if (!target) return { path: null, rowCount: 0 }
+      const rowCount = writeCsv(target, page.entries, auditColumns)
+      ctx.audit.write({
+        module: 'audit',
+        action: 'export',
+        summary: `Exported ${page.entries.length} audit entr(y/ies) to CSV`,
+        detail: { file: target, rows: page.entries.length }
+      })
+      return { path: target, rowCount: page.entries.length }
+    },
     'audit.forEntity': (ctx, input) => auditEntryFor(ctx, input.entityType, input.entityId, input.limit),
 
     'settings.all': (ctx) => getAllSettings(ctx)
   }
 }
+
+const auditColumns: Array<CsvColumn<AuditEntry>> = [
+  { key: 'at', header: 'Timestamp', value: (row) => new Date(row.at).toISOString() },
+  { key: 'username', header: 'User', value: (row) => row.username ?? 'system' },
+  { key: 'module', header: 'Module', value: (row) => row.module },
+  { key: 'action', header: 'Action', value: (row) => row.action },
+  { key: 'result', header: 'Result', value: (row) => row.result },
+  { key: 'entityType', header: 'Entity type', value: (row) => row.entityType ?? '' },
+  { key: 'entityId', header: 'Entity id', value: (row) => (row.entityId === null ? '' : String(row.entityId)) },
+  { key: 'summary', header: 'Summary', value: (row) => row.summary },
+  { key: 'sessionId', header: 'Session', value: (row) => row.sessionId ?? '' },
+  { key: 'detail', header: 'Detail', value: (row) => (row.detail ? JSON.stringify(row.detail) : '') }
+]
 
 export { systemActor }

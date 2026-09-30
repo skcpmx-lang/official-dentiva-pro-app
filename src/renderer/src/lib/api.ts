@@ -32,14 +32,12 @@ export async function invoke<C extends ChannelId>(
   payload: ChannelInput<C>,
   _options: InvokeResultOptions = {}
 ): Promise<ChannelOutput<C>> {
-  const envelope = (await window.dentiva.invoke(channel as string, payload)) as
-    | { ok: true, data: unknown }
-    | { ok: false, error: SerializedAppError }
+  const envelope = await window.dentiva.invoke(channel, payload)
   if (!envelope || typeof envelope !== 'object') {
     throw new ApiError({ code: 'E_INTERNAL', message: 'The application did not respond. Please try again.' })
   }
   if (!envelope.ok) throw new ApiError(envelope.error)
-  return envelope.data as ChannelOutput<C>
+  return envelope.data
 }
 
 export interface QueryState<T> {

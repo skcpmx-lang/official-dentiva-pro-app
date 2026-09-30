@@ -38,7 +38,7 @@ export function useZodForm<S extends z.ZodTypeAny>(schema: S, initial: z.input<S
   const initialRef = useRef(initial)
 
   const setValue = useCallback((key: keyof z.input<S>, value: unknown) => {
-    setValuesState((current) => ({ ...current, [key]: value }))
+    setValuesState((current) => ({ ...(current as Record<string, unknown>), [key as string]: value }) as z.input<S>)
     setErrors((current) => {
       if (!(key as string in current)) return current
       const next = { ...current }
@@ -48,7 +48,7 @@ export function useZodForm<S extends z.ZodTypeAny>(schema: S, initial: z.input<S
   }, [])
 
   const setValues = useCallback((next: Partial<z.input<S>>) => {
-    setValuesState((current) => ({ ...current, ...next }))
+    setValuesState((current) => ({ ...(current as Record<string, unknown>), ...(next as Record<string, unknown>) }) as z.input<S>)
   }, [])
 
   const validate = useCallback((): boolean => {

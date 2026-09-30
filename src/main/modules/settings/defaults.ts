@@ -133,6 +133,38 @@ const GROUP_LABELS: Record<string, string> = {
   setup: 'Setup'
 }
 
+/** Settings the renderer needs before sign-in (formats, density, landing page). */
+export const DISPLAY_SETTING_KEYS: readonly string[] = [
+  'practice.currency',
+  'practice.dateFormat',
+  'practice.timeFormat',
+  'practice.openingTime',
+  'practice.closingTime',
+  'practice.weeklyClosedDays',
+  'practice.appointmentDuration',
+  'practice.slotStep',
+  'practice.autoLockMinutes',
+  'ui.density',
+  'ui.reducedMotion',
+  'ui.sidebarCollapsed',
+  'ui.landingPage',
+  'ui.rememberUsername',
+  'print.defaultPaperClass',
+  'print.thermalWidthMm',
+  'notifications.overdueInvoiceDays',
+  'inventory.lowStockAlerts',
+  'inventory.expiryWarningDays'
+]
+
+/** Subset of settings readable without `settings.view` (display and behaviour only). */
+export function displaySettings(all: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const key of DISPLAY_SETTING_KEYS) {
+    if (key in all) result[key] = all[key] as string
+  }
+  return result
+}
+
 export function settingGroup(key: string): string {
   const prefix = key.split('.')[0] ?? 'practice'
   return GROUP_LABELS[prefix] ?? 'Other'

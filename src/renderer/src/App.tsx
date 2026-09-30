@@ -1,0 +1,254 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createHashRouter, Navigate, Outlet, RouterProvider, useLocation, useNavigate } from 'react-router-dom'
+import { invoke, useInvoke } from './lib/api'
+import { useAppStore, usePermission } from './store/appStore'
+import { AppShell } from './components/shell/AppShell'
+import { CommandPalette } from './components/shell/CommandPalette'
+import { ConfirmDialogHost, Toaster, toast } from './components/ui/overlay'
+import { Button, LoadingState, PermissionDenied } from './components/ui/primitives'
+import { ActivationScreen } from './features/auth/ActivationScreen'
+import { LoginScreen } from './features/auth/LoginScreen'
+import { LockScreen } from './features/auth/LockScreen'
+import { ChangePasswordScreen } from './features/auth/ChangePasswordScreen'
+import { SetupWizard } from './features/setup/SetupWizard'
+import { DashboardScreen } from './features/dashboard/DashboardScreen'
+import { PatientListScreen } from './features/patients/PatientListScreen'
+import { PatientFormScreen } from './features/patients/PatientFormScreen'
+import { PatientProfileScreen } from './features/patients/PatientProfileScreen'
+import { SettingsScreen } from './features/settings/SettingsScreen'
+import { DentistsScreen } from './features/settings/DentistsScreen'
+import { UsersScreen } from './features/settings/UsersScreen'
+import { RolesScreen } from './features/settings/RolesScreen'
+import { AuditScreen } from './features/admin/AuditScreen'
+import { AboutScreen } from './features/admin/AboutScreen'
+import { NotFoundScreen } from './features/states/NotFoundScreen'
+import type { BootstrapResult } from './lib/types'
+
+/**
+ * Application root.
+ *
+ * Runs the startup sequence exactly once (activation → clinic setup → sign-in → workspace), keeps the
+ * renderer's view of the session in sync with the main process, and routes to the correct gate. The
+ * UI never decides by itself whether the application may be used: it renders what `app.bootstrap`
+ * reports and what the session summary allows.
+ */
+
+export function App(): ReactNode {
+  const ready = useAppStore((state) => state.ready)
+  const session = useAppStore((state) => state.session)
+  const locked = useAppStore((state) => state.locked)
+  const router = useMemo(
+    () =>
+      createHashRouter([
+        { path: '/activation', element: <ActivationScreen /> },
+        { path: '/setup', element: <SetupWizard /> },
+        { path: '/login', element: <LoginScreen /> },
+        { path: '/lock', element: <LockScreen /> },
+        {
+          path: '/',
+          element: <SessionGate />,
+          children: [
+            {
+              element: <AppShell />,
+              children: [
+                { index: true, element: <DashboardScreen /> },
+                { path: 'patients', element: <PermissionRoute permission="patients.view"><PatientListScreen /></PermissionRoute> },
+                { path: 'patients/new', element: <PermissionRoute permission="patients.create"><PatientFormScreen mode="create" /></PermissionRoute> },
+                { path: 'patients/:patientId', element: <PermissionRoute permission="patients.view"><PatientProfileScreen /></PermissionRoute> },
+                { path: 'patients/:patientId/edit', element: <PermissionRoute permission="patients.edit"><PatientFormScreen mode="edit" /></PermissionRoute> },
+                { path: 'settings', element: <PermissionRoute permission="settings.view"><SettingsScreen /></PermissionRoute> },
+                { path: 'settings/dentists', element: <PermissionRoute permission="settings.view"><DentistsScreen /></PermissionRoute> },
+                { path: 'settings/users', element: <PermissionRoute permission="users.view"><UsersScreen /></PermissionRoute> },
+                { path: 'settings/roles', element: <PermissionRoute permission="roles.view"><RolesScreen /></PermissionRoute> },
+                { path: 'audit', element: <PermissionRoute permission="audit.view"><AuditScreen /></PermissionRoute> },
+                { path: 'about', element: <AboutScreen /> },
+                { path: 'account/password', element: <ChangePasswordScreen /> }
+              ]
+            }
+          ]
+        },
+        { path: '*', element: <NotFoundScreen /> }
+      ]),
+    []
+  )
+
+  return (
+    <BootstrapGate>
+      {ready ? <RouterProvider router={router} /> : null}
+      <Toaster />
+      <ConfirmDialogHost />
+      {session && !locked ? <CommandPalette /> : null}
+    </BootstrapGate>
+  )
+}
+
+/** Runs the startup handshake and keeps global state (session, settings, events) up to date. */
+function BootstrapGate({ children }: { children: ReactNode }): ReactNode {
+  const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const setReady = useAppStore((state) => state.setReady)
+
+  useEffect(() => {
+    let active = true
+    const controller = { cancelled: false }
+
+    async function load(): Promise<void> {
+      try {
+        const bootstrap = await invoke('app.bootstrap', {})
+        if (!active) return
+        applyBootstrap(bootstrap)
+      } catch (caught) {
+        if (!active) return
+        setError(caught instanceof Error ? caught.message : 'Dentiva Pro could not start.')
+      } finally {
+        if (active && !controller.cancelled) setReady(true)
+      }
+    }
+
+    void load()
+
+    const unsubscribe = window.dentiva.on('app:message', (payload) => {
+      toast(payload.kind, payload.message, payload.detail)
+    })
+
+    return () => {
+      active = false
+      controller.cancelled = true
+      unsubscribe()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt])
+
+  if (error) {
+    return (
+      <div className="auth-layout">
+        <div className="auth-card stack">
+          <h1 className="auth-card__title">Dentiva Pro could not start</h1>
+          <p className="muted">{error}</p>
+          <p className="muted small">
+            Your data has not been changed. If the problem continues, open the data folder from the recovery options below and contact support
+            with the log files from the <code>logs</code> folder.
+          </p>
+          <div className="row">
+            <Button variant="primary" onClick={() => setAttempt((value) => value + 1)}>
+              Try again
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void invoke('app.openDataFolder', { kind: 'logs' })
+              }}
+            >
+              Open log folder
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
+/** Applies a bootstrap payload to the global store. */
+export function applyBootstrap(bootstrap: BootstrapResult): void {
+  const store = useAppStore.getState()
+  store.setActivation(bootstrap.activation)
+  store.setSetupStatus(bootstrap.setup)
+  store.setClinic(bootstrap.clinic)
+  store.setBuild(bootstrap.build, bootstrap.machine)
+  store.setMaintenanceMode(bootstrap.maintenanceMode)
+  store.setStage(bootstrap.stage)
+  if (bootstrap.settings) store.setSettings(bootstrap.settings)
+  if (bootstrap.session) store.setSession(bootstrap.session)
+}
+
+/** Keeps the workspace reachable only for an authenticated, unlocked session. */
+function SessionGate(): ReactNode {
+  const stage = useAppStore((state) => state.stage)
+  const session = useAppStore((state) => state.session)
+  const locked = useAppStore((state) => state.locked)
+  const setLocked = useAppStore((state) => state.setLocked)
+  const setSession = useAppStore((state) => state.setSession)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const needsPasswordChange = session?.mustChangePassword === true
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const state = await invoke('session.state', {})
+        if (state.session) setSession(state.session)
+        setLocked(state.locked)
+      } catch {
+        /* The router will redirect to sign-in because no session is present. */
+      }
+    })()
+  }, [setLocked, setSession])
+
+  useEffect(() => {
+    const unsubscribeLocked = window.dentiva.on('session:locked', () => {
+      setLocked(true)
+    })
+    const unsubscribeUnlocked = window.dentiva.on('session:unlocked', () => {
+      setLocked(false)
+    })
+    const unsubscribeEnded = window.dentiva.on('session:ended', () => {
+      setSession(null)
+      navigate('/login', { replace: true })
+    })
+    const unsubscribePermissions = window.dentiva.on('session:permissions-changed', () => {
+      void (async () => {
+        try {
+          const summary = await invoke('session.refresh', {})
+          setSession(summary)
+          toast('info', 'Your access rights were updated')
+        } catch {
+          /* A failed refresh leaves the previous permission set in place; the main process still enforces. */
+        }
+      })()
+    })
+    return () => {
+      unsubscribeLocked()
+      unsubscribeUnlocked()
+      unsubscribeEnded()
+      unsubscribePermissions()
+    }
+  }, [navigate, setLocked, setSession])
+
+  // Idle activity ping: keeps the main-process idle clock honest while the operator is working.
+  useEffect(() => {
+    let last = 0
+    const onActivity = (): void => {
+      const now = Date.now()
+      if (now - last < 60_000) return
+      last = now
+      void invoke('session.touch', {})
+    }
+    for (const event of ['pointerdown', 'keydown', 'wheel'] as const) {
+      window.addEventListener(event, onActivity, { passive: true })
+    }
+    return () => {
+      for (const event of ['pointerdown', 'keydown', 'wheel'] as const) {
+        window.removeEventListener(event, onActivity)
+      }
+    }
+  }, [])
+
+  if (stage === 'activation') return <Navigate to="/activation" replace />
+  if (stage === 'setup') return <Navigate to="/setup" replace />
+  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (locked) return <Navigate to="/lock" replace />
+  if (needsPasswordChange && location.pathname !== '/account/password') {
+    return <Navigate to="/account/password" replace />
+  }
+  return <Outlet />
+}
+
+/** Route-level permission gate. Menu entries are also filtered, but this is the enforcement point. */
+function PermissionRoute({ permission, children }: { permission: string | string[], children: ReactNode }): ReactNode {
+  const allowed = usePermission(permission)
+  if (!allowed) return <PermissionDenied />
+  return <>{children}</>
+}

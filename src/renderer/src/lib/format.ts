@@ -152,3 +152,52 @@ export const TREATMENT_CATEGORIES = [
 export function treatmentCategoryLabel(value: string): string {
   return TREATMENT_CATEGORIES.find((category) => category.value === value)?.label ?? value
 }
+
+/* ------------------------------------------------------------------ non-hook helpers */
+
+/**
+ * Formatting helpers for code that is not a React component (event handlers, exported CSV files and
+ * print pipelines). They read the same settings as {@link useFormatters} so a document always matches
+ * what the operator saw on screen.
+ */
+function currentDateFormat(): DateFormat {
+  return (useAppStore.getState().settings['practice.dateFormat'] ?? 'dd/MM/yyyy') as DateFormat
+}
+
+function currentTimeFormat(): TimeFormat {
+  return (useAppStore.getState().settings['practice.timeFormat'] ?? '12h') as TimeFormat
+}
+
+export function formatDate(ms: number | null | undefined): string {
+  return ms === null || ms === undefined ? DASH : formatDateShared(ms, currentDateFormat())
+}
+
+export function formatDateTime(ms: number | null | undefined): string {
+  return ms === null || ms === undefined ? DASH : formatDateTimeShared(ms, currentDateFormat(), currentTimeFormat())
+}
+
+export function formatTime(ms: number | null | undefined): string {
+  return ms === null || ms === undefined ? DASH : formatTimeShared(ms, currentTimeFormat())
+}
+
+export function formatRelativeTime(ms: number): string {
+  return formatRelative(ms)
+}
+
+/** Byte counts for backups, attachments and the database file. */
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return DASH
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let value = bytes / 1024
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unit]}`
+}
+
+/** Dentiva Pro records money in Bangladeshi Taka only. */
+export const CURRENCY_CODE = 'BDT'
+export const CURRENCY_SYMBOL = '\u09F3'

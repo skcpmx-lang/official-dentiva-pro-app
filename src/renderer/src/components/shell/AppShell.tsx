@@ -1,42 +1,34 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
-  Activity,
-  BarChart3,
-  Boxes,
-  CalendarDays,
   ChevronsLeft,
   ChevronsRight,
-  ClipboardList,
   Cog,
-  CreditCard,
-  FileText,
   Info,
   LayoutDashboard,
-  ListOrdered,
   Lock,
   LogOut,
-  Package,
-  Pill,
-  Receipt,
   ScrollText,
   Search,
   ShieldCheck,
   Stethoscope,
+  UserCog,
   Users,
   UsersRound
 } from 'lucide-react'
-import { useAppStore, usePermission } from '../../store/appStore'
-import { IconButton, PopoverMenu, Badge } from '../ui/primitives'
-import { api } from '../../lib/client'
-import { useFormatters } from '../../lib/format'
+import { useAppStore, useClinic, usePermission, useSession } from '../../store/appStore'
+import { Badge, IconButton } from '../ui/primitives'
 import { confirmDialog, toast } from '../ui/overlay'
-import type { SessionSummary } from '@shared/contracts'
+import { invoke, useInvoke } from '../../lib/api'
+import { useFormatters } from '../../lib/format'
+import { clearSessionState } from '../../store/appStore'
 
 /**
- * Application shell: sidebar (expandable 272 px ↔ 72 px), header with clinic identity, global search
- * entry point, notification centre, live clock, user menu and lock control. Navigation entries are
- * permission-filtered, and the shell never renders a screen the session cannot access.
+ * Application shell.
+ *
+ * Holds the navigation rail (permission-filtered), the clinic identity, the global search entry point,
+ * today's queue counters, the clock and the session controls. Navigation only lists screens that exist,
+ * so a control can never lead to a dead end.
  */
 
 interface NavEntry {
@@ -44,7 +36,8 @@ interface NavEntry {
   label: string
   icon: ReactNode
   permission?: string | string[]
-  badgeKey?: 'queue' | 'notifications'
+  badge?: 'queue'
+  end?: boolean
 }
 
 interface NavSection {
@@ -56,100 +49,77 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Practice',
     entries: [
-      { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-      { to: '/patients', label: 'Patients', icon: <Users size={18} />, permission: 'patients.view' },
-      { to: '/appointments', label: 'Appointments', icon: <CalendarDays size={18} />, permission: 'appointments.view' },
-      { to: '/queue', label: 'Queue', icon: <ListOrdered size={18} />, permission: 'queue.view', badgeKey: 'queue' }
+      { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} />, end: true },
+      { to: '/patients', label: 'Patients', icon: <Users size={18} />, permission: 'patients.view' }
     ]
   },
   {
     title: 'Clinical',
-    entries: [
-      { to: '/treatments', label: 'Treatments', icon: <Stethoscope size={18} />, permission: ['clinical.view', 'prescriptions.view'] },
-      { to: '/prescriptions', label: 'Prescriptions', icon: <Pill size={18} />, permission: 'prescriptions.view' },
-      { to: '/clinical/catalog', label: 'Clinical catalog', icon: <ClipboardList size={18} />, permission: 'clinical.view' }
-    ]
-  },
-  {
-    title: 'Billing',
-    entries: [
-      { to: '/invoices', label: 'Invoices', icon: <Receipt size={18} />, permission: 'billing.view' },
-      { to: '/payments', label: 'Payments', icon: <CreditCard size={18} />, permission: 'payments.view' },
-      { to: '/inventory', label: 'Inventory', icon: <Package size={18} />, permission: 'inventory.view' },
-      { to: '/suppliers', label: 'Suppliers', icon: <Boxes size={18} />, permission: 'suppliers.view' },
-      { to: '/accounting', label: 'Accounting', icon: <BarChart3 size={18} />, permission: 'accounting.view' },
-      { to: '/reports', label: 'Reports', icon: <FileText size={18} />, permission: 'reports.view' }
-    ]
+    entries: [{ to: '/settings/dentists', label: 'Dentists', icon: <Stethoscope size={18} />, permission: 'settings.view' }]
   },
   {
     title: 'Administration',
     entries: [
-      { to: '/staff', label: 'Staff & Users', icon: <UsersRound size={18} />, permission: ['staff.view', 'users.view'] },
+      { to: '/settings/users', label: 'Users', icon: <UserCog size={18} />, permission: 'users.view' },
+      { to: '/settings/roles', label: 'Roles', icon: <UsersRound size={18} />, permission: 'roles.view' },
       { to: '/audit', label: 'Audit log', icon: <ScrollText size={18} />, permission: 'audit.view' },
-      { to: '/backup', label: 'Backup & restore', icon: <ShieldCheck size={18} />, permission: ['backups.create', 'backups.restore', 'backups.configure'] },
       { to: '/settings', label: 'Settings', icon: <Cog size={18} />, permission: 'settings.view' },
       { to: '/about', label: 'About', icon: <Info size={18} /> }
     ]
   }
 ]
 
+function initials(fullName: string): string {
+  return (
+    fullName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || 'DP'
+  )
+}
+
 function useClock(): Date {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 20_000)
-    return () => clearInterval(timer)
+    const timer = window.setInterval(() => setNow(new Date()), 20_000)
+    return () => window.clearInterval(timer)
   }, [])
   return now
-}
-
-function initials(fullName: string): string {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
 }
 
 export function AppShell(): ReactNode {
   const collapsed = useAppStore((state) => state.sidebarCollapsed)
   const toggleSidebar = useAppStore((state) => state.toggleSidebar)
-  const session = useAppStore((state) => state.session)
-  const clinic = useAppStore((state) => state.clinic)
-  const notifications = useAppStore((state) => state.notifications)
   const setCommandPaletteOpen = useAppStore((state) => state.setCommandPaletteOpen)
-  const setSession = useAppStore((state) => state.setSession)
-  const setLocked = useAppStore((state) => state.setLocked)
-  const pushToast = useAppStore((state) => state.pushToast)
+  const session = useSession()
+  const clinic = useClinic()
   const formatters = useFormatters()
   const navigate = useNavigate()
-  const location = useLocation()
   const clock = useClock()
-  const [queueCount, setQueueCount] = useState(0)
+  const canSeeQueue = usePermission('queue.view')
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
-  const canViewQueue = usePermission('queue.view')
+  const queue = useInvoke('dashboard.queue', {}, { enabled: canSeeQueue, pollMs: 30_000 })
+  const activeQueue = (queue.data?.waiting ?? 0) + (queue.data?.called ?? 0) + (queue.data?.inProgress ?? 0)
 
   useEffect(() => {
-    if (!canViewQueue) {
-      setQueueCount(0)
-      return
+    if (!menuOpen) return
+    const onPointerDown = (event: PointerEvent): void => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
     }
-    let active = true
-    const load = async (): Promise<void> => {
-      try {
-        const summary = await api.queueSummary()
-        if (active) setQueueCount(summary.waiting + summary.called + summary.inProgress)
-      } catch {
-        /* the badge is informational; failures are surfaced on the queue screen itself */
-      }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setMenuOpen(false)
     }
-    void load()
-    const timer = setInterval(() => void load(), 30_000)
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
     return () => {
-      active = false
-      clearInterval(timer)
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
     }
-  }, [canViewQueue])
+  }, [menuOpen])
 
   const sections = useMemo(
     () =>
@@ -165,41 +135,42 @@ export function AppShell(): ReactNode {
   )
 
   const handleLock = useCallback(async () => {
+    setMenuOpen(false)
     try {
-      await api.lock()
-      setLocked(true)
-    } catch {
-      pushToast({ kind: 'error', title: 'The application could not be locked', message: 'Please try again.' })
+      await invoke('auth.lock', {})
+      useAppStore.getState().setLocked(true)
+      navigate('/lock', { replace: true })
+    } catch (error) {
+      toast('error', 'The application could not be locked', error instanceof Error ? error.message : undefined)
     }
-  }, [setLocked, pushToast])
+  }, [navigate])
 
   const handleSignOut = useCallback(async () => {
-    const confirmed = await confirmDialog({
+    setMenuOpen(false)
+    const answer = await confirmDialog({
       title: 'Sign out of Dentiva Pro?',
-      message: 'Any unsaved changes in open forms will be lost.',
+      message: 'Unsaved changes in open forms will be lost. Your data stays on this computer.',
       confirmLabel: 'Sign out'
     })
-    if (!confirmed) return
-    await api.logout()
-    setSession(null)
-    setLocked(false)
-    navigate('/login', { replace: true })
-  }, [navigate, setSession, setLocked])
-
-  const handleChangePassword = useCallback(() => {
-    navigate('/account/password')
+    if (!answer.confirmed) return
+    try {
+      await invoke('auth.logout', {})
+    } finally {
+      clearSessionState()
+      navigate('/login', { replace: true })
+    }
   }, [navigate])
 
   return (
-    <div className="app-shell" data-collapsed={collapsed}>
-      <aside className="sidebar" data-collapsed={collapsed} aria-label="Main navigation">
+    <div className="app-shell" data-collapsed={collapsed ? 'true' : undefined}>
+      <aside className="sidebar" data-collapsed={collapsed ? 'true' : undefined} aria-label="Main navigation">
         <div className="sidebar__brand">
           <span className="sidebar__brand-mark" aria-hidden="true">
             <BrandMark />
           </span>
           <span className="sidebar__brand-text">
             <strong>Dentiva Pro</strong>
-            <span>Dental practice suite</span>
+            <span>{clinic?.name || 'Dental practice suite'}</span>
           </span>
         </div>
 
@@ -211,17 +182,13 @@ export function AppShell(): ReactNode {
                 <NavLink
                   key={entry.to}
                   to={entry.to}
-                  end={entry.to === '/'}
+                  end={entry.end}
                   className={({ isActive }) => `nav-item${isActive ? ' nav-item--active' : ''}`}
                   title={collapsed ? entry.label : undefined}
-                  aria-current={location.pathname === entry.to ? 'page' : undefined}
                 >
                   {entry.icon}
                   <span className="nav-item__label">{entry.label}</span>
-                  {entry.badgeKey === 'queue' && queueCount > 0 ? <span className="nav-item__badge">{queueCount}</span> : null}
-                  {entry.badgeKey === 'notifications' && notifications.unread > 0 ? (
-                    <span className="nav-item__badge">{notifications.unread}</span>
-                  ) : null}
+                  {entry.badge === 'queue' && activeQueue > 0 ? <span className="nav-item__badge">{activeQueue}</span> : null}
                 </NavLink>
               ))}
             </div>
@@ -229,85 +196,97 @@ export function AppShell(): ReactNode {
         </nav>
 
         <div className="sidebar__footer">
-          <div className="sidebar__user">
-            <span className="avatar" aria-hidden="true">
-              {initials(session?.fullName ?? '')}
-            </span>
-            {!collapsed ? (
-              <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-                <strong style={{ fontSize: 12.5, color: '#fff' }} className="truncate">
-                  {session?.fullName}
-                </strong>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.6)' }}>{session?.roleCode.replace(/_/g, ' ')}</span>
+          {!collapsed ? (
+            <div className="sidebar__user">
+              <span className="avatar" aria-hidden="true">
+                {initials(session?.fullName ?? '')}
               </span>
-            ) : null}
-          </div>
+              <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+                <strong className="truncate">{session?.fullName}</strong>
+                <span className="truncate">{session?.roleCode.replace(/_/g, ' ')}</span>
+              </span>
+            </div>
+          ) : null}
           <IconButton
             label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             icon={collapsed ? <ChevronsRight size={17} /> : <ChevronsLeft size={17} />}
             onClick={toggleSidebar}
-            aria-expanded={!collapsed}
-            variant="ghost"
           />
         </div>
       </aside>
 
       <header className="app-header">
-        <div className="app-header__brand">
-          <div className="app-header__clinic">
-            <strong className="truncate">{clinic?.name || 'Dentiva Pro'}</strong>
-            <span className="small muted truncate">{clinic?.phone ?? 'Offline clinic suite'}</span>
-          </div>
-        </div>
-
-        <button type="button" className="app-header__search" onClick={() => setCommandPaletteOpen(true)} aria-label="Global search">
+        <button type="button" className="app-header__search" onClick={() => setCommandPaletteOpen(true)} aria-label="Open search">
           <Search size={16} />
-          <span className="grow">Search patients, invoices, prescriptions…</span>
+          <span className="grow">Search patients, invoices and prescriptions</span>
           <Badge tone="neutral">Ctrl K</Badge>
         </button>
 
         <div className="app-header__actions">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={`Notifications (${notifications.unread} unread)`}
-            onClick={() => navigate('/notifications')}
-          >
-            <Activity size={18} />
-            {notifications.unread > 0 ? <span className="icon-btn__dot">{notifications.unread > 9 ? '9+' : notifications.unread}</span> : null}
-          </button>
-
-          <div className="app-header__clock" aria-live="off">
-            <strong>{formatters.time(clock.getTime())}</strong>
-            <span>{formatters.date(clock.getTime())}</span>
+          <div className="app-header__clock" aria-hidden="true">
+            <strong className="num">{formatters.time(clock.getTime())}</strong>
+            <span className="muted">{formatters.date(clock.getTime())}</span>
           </div>
 
-          <IconButton label="Lock the application (Ctrl+L)" icon={<Lock size={18} />} onClick={handleLock} />
+          {canSeeQueue ? (
+            <NavLink to="/" className="chip" aria-label={`${activeQueue} patient(s) in the queue`}>
+              Queue: <strong className="num">{activeQueue}</strong>
+            </NavLink>
+          ) : null}
 
-          <PopoverMenu
-            trigger={({ toggle }) => (
-              <button type="button" className="icon-btn" onClick={toggle} aria-label="User menu" aria-haspopup="menu">
-                <span className="avatar" style={{ background: 'var(--brand-600)' }}>
-                  {initials(session?.fullName ?? '')}
-                </span>
-              </button>
-            )}
-          >
-            <div className="menu__label">{session?.fullName}</div>
-            <button type="button" className="menu__item" onClick={handleChangePassword}>
-              <ShieldCheck size={15} /> Change password
+          <IconButton label="Lock the application (Ctrl+L)" icon={<Lock size={18} />} onClick={() => void handleLock()} />
+
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="avatar avatar--button"
+              onClick={() => setMenuOpen((value) => !value)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="User menu"
+            >
+              {initials(session?.fullName ?? '')}
             </button>
-            <button type="button" className="menu__item" onClick={() => navigate('/settings')}>
-              <Cog size={15} /> Settings
-            </button>
-            <div className="menu__separator" />
-            <button type="button" className="menu__item" onClick={() => void handleLock()}>
-              <Lock size={15} /> Lock application
-            </button>
-            <button type="button" className="menu__item menu__item--danger" onClick={() => void handleSignOut()}>
-              <LogOut size={15} /> Sign out
-            </button>
-          </PopoverMenu>
+            {menuOpen ? (
+              <div className="menu" role="menu">
+                <div className="menu__label">
+                  {session?.fullName}
+                  <span className="muted small">{session?.username}</span>
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="menu__item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate('/account/password')
+                  }}
+                >
+                  <ShieldCheck size={15} /> Change password
+                </button>
+                {session?.permissions.includes('settings.view') ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="menu__item"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      navigate('/settings')
+                    }}
+                  >
+                    <Cog size={15} /> Settings
+                  </button>
+                ) : null}
+                <div className="menu__separator" />
+                <button type="button" role="menuitem" className="menu__item" onClick={() => void handleLock()}>
+                  <Lock size={15} /> Lock application
+                </button>
+                <button type="button" role="menuitem" className="menu__item menu__item--danger" onClick={() => void handleSignOut()}>
+                  <LogOut size={15} /> Sign out
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -328,8 +307,4 @@ function BrandMark(): ReactNode {
       />
     </svg>
   )
-}
-
-export function useSessionSummary(): SessionSummary | null {
-  return useAppStore((state) => state.session)
 }

@@ -1,94 +1,88 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { create } from 'zustand'
-import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
-import { useAppStore, type ToastKind } from '../../store/appStore'
-import { Button, IconButton } from './primitives'
+import { AlertTriangle, CheckCircle2, Info, Loader2, X, XCircle } from 'lucide-react'
+import { useAppStore } from '../../store/appStore'
 
 /**
- * Overlays: modal, drawer, toasts and the promise-based confirmation/prompt dialogs used by
- * destructive operations (which always state consequences and, for the riskiest actions, require the
- * operator to type a confirmation phrase).
+ * Overlays: modal, drawer, toast host and the promise-based confirmation / typed-confirmation dialogs
+ * used by destructive operations.
+ *
+ * Dialogs are focus-trapped, dismissible with Escape, and never close while a destructive action is
+ * still running (`busy`), so an operator cannot dismiss a confirmation half-way through a restore.
  */
-
-function useFocusTrap(active: boolean, containerRef: React.RefObject<HTMLElement | null>, onEscape: () => void): void {
-  useEffect(() => {
-    if (!active) return
-    const container = containerRef.current
-    if (!container) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
-
-    const focusables = (): HTMLElement[] =>
-      Array.from(
-        container.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter((element) => element.offsetParent !== null)
-
-    const first = focusables()[0]
-    first?.focus()
-
-    const handler = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onEscape()
-        return
-      }
-      if (event.key !== 'Tab') return
-      const items = focusables()
-      if (items.length === 0) return
-      const firstItem = items[0]!
-      const lastItem = items[items.length - 1]!
-      if (event.shiftKey && document.activeElement === firstItem) {
-        event.preventDefault()
-        lastItem.focus()
-      } else if (!event.shiftKey && document.activeElement === lastItem) {
-        event.preventDefault()
-        firstItem.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handler, true)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', handler, true)
-      document.body.style.overflow = ''
-      previouslyFocused?.focus?.()
-    }
-  }, [active, containerRef, onEscape])
-}
 
 export interface ModalProps {
   open: boolean
   title: ReactNode
   description?: ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
-  onClose(): void
   footer?: ReactNode
-  children: ReactNode
-  /** Prevents accidental closing (Esc/backdrop) during a destructive operation in progress. */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   busy?: boolean
+  onClose(): void
+  children: ReactNode
+  /** When false the dialog cannot be dismissed by clicking the backdrop (used for critical flows). */
+  dismissible?: boolean
 }
 
-export function Modal({ open, title, description, size = 'md', onClose, footer, children, busy }: ModalProps): ReactNode {
-  const ref = useRef<HTMLDivElement>(null)
-  const handleClose = (): void => {
-    if (!busy) onClose()
-  }
-  useFocusTrap(open, ref, handleClose)
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+export function Modal({ open, title, description, footer, size = 'md', busy, onClose, children, dismissible = true }: ModalProps): ReactNode {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    previouslyFocused.current = document.activeElement as HTMLElement | null
+    const container = containerRef.current
+    const firstFocusable = container?.querySelector<HTMLElement>(FOCUSABLE)
+    ;(firstFocusable ?? container)?.focus()
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape' && dismissible && !busy) {
+        event.preventDefault()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab' || !container) return
+      const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => !element.hasAttribute('disabled'))
+      if (focusable.length === 0) return
+      const first = focusable[0]!
+      const last = focusable[focusable.length - 1]!
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown, true)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.body.style.overflow = ''
+      previouslyFocused.current?.focus?.()
+    }
+  }, [open, dismissible, busy, onClose])
+
   if (!open) return null
 
   return (
-    <div className="overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && handleClose()}>
-      <div ref={ref} className={`modal modal--${size}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : 'Dialog'}>
-        <div className="modal__header">
+    <div className="overlay" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && dismissible && !busy) onClose()
+    }}>
+      <div ref={containerRef} className={`modal modal--${size}`} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : 'Dialog'} tabIndex={-1}>
+        <header className="modal__header">
           <div>
             <div className="modal__title">{title}</div>
             {description ? <div className="modal__description">{description}</div> : null}
           </div>
-          <IconButton label="Close" icon={<X size={18} />} onClick={handleClose} disabled={busy} />
-        </div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" disabled={busy}>
+            <X size={18} />
+          </button>
+        </header>
         <div className="modal__body">{children}</div>
-        {footer ? <div className="modal__footer">{footer}</div> : null}
+        {footer ? <footer className="modal__footer">{footer}</footer> : null}
       </div>
     </div>
   )
@@ -98,188 +92,198 @@ export function Drawer({
   open,
   title,
   description,
+  footer,
   onClose,
   children,
-  footer
+  side = 'right'
 }: {
   open: boolean
   title: ReactNode
   description?: ReactNode
+  footer?: ReactNode
   onClose(): void
   children: ReactNode
-  footer?: ReactNode
+  side?: 'left' | 'right'
 }): ReactNode {
-  const ref = useRef<HTMLDivElement>(null)
-  useFocusTrap(open, ref, onClose)
   if (!open) return null
   return (
     <>
-      <div className="overlay" role="presentation" style={{ background: 'rgba(11,31,58,.28)' }} onMouseDown={(event) => event.target === event.currentTarget && onClose()} />
-      <div ref={ref} className="drawer" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : 'Panel'}>
-        <div className="modal__header">
+      <div className="overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()} />
+      <aside className="drawer" data-side={side} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : 'Panel'}>
+        <header className="modal__header">
           <div>
             <div className="modal__title">{title}</div>
             {description ? <div className="modal__description">{description}</div> : null}
           </div>
-          <IconButton label="Close" icon={<X size={18} />} onClick={onClose} />
-        </div>
-        <div className="modal__body grow">{children}</div>
-        {footer ? <div className="modal__footer">{footer}</div> : null}
-      </div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        </header>
+        <div className="modal__body">{children}</div>
+        {footer ? <footer className="modal__footer">{footer}</footer> : null}
+      </aside>
     </>
   )
 }
 
 /* ------------------------------------------------------------------ Toasts */
 
-const TOAST_ICON: Record<ToastKind, ReactNode> = {
-  success: <CheckCircle2 size={18} color="var(--success)" />,
-  error: <XCircle size={18} color="var(--danger)" />,
-  warning: <AlertTriangle size={18} color="var(--warning)" />,
-  info: <Info size={18} color="var(--info)" />
-}
-
 export function Toaster(): ReactNode {
   const toasts = useAppStore((state) => state.toasts)
   const dismiss = useAppStore((state) => state.dismissToast)
 
   useEffect(() => {
-    const timers = toasts
-      .filter((toast) => toast.kind !== 'error')
-      .map((toast) => setTimeout(() => dismiss(toast.id), 5000))
-    return () => timers.forEach(clearTimeout)
+    if (toasts.length === 0) return
+    const timers = toasts.map((toast) =>
+      window.setTimeout(() => dismiss(toast.id), toast.kind === 'error' ? 8000 : 4500)
+    )
+    return () => timers.forEach((timer) => window.clearTimeout(timer))
   }, [toasts, dismiss])
 
   if (toasts.length === 0) return null
   return (
     <div className="toasts" role="region" aria-live="polite" aria-label="Notifications">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast--${toast.kind}`}>
-          <span style={{ marginTop: 2 }}>{TOAST_ICON[toast.kind]}</span>
+        <div key={toast.id} className={`toast toast--${toast.kind}`} role="status">
+          <span className="toast__icon">
+            {toast.kind === 'success' ? <CheckCircle2 size={17} /> : null}
+            {toast.kind === 'error' ? <XCircle size={17} /> : null}
+            {toast.kind === 'warning' ? <AlertTriangle size={17} /> : null}
+            {toast.kind === 'info' ? <Info size={17} /> : null}
+          </span>
           <div className="grow">
             <div className="toast__title">{toast.title}</div>
             {toast.message ? <div className="toast__message">{toast.message}</div> : null}
             {toast.action ? (
-              <div style={{ marginTop: 6 }}>
-                <Button
-                  size="sm"
-                  variant="tertiary"
-                  onClick={() => {
-                    toast.action?.run()
-                    dismiss(toast.id)
-                  }}
-                >
-                  {toast.action.label}
-                </Button>
-              </div>
+              <button type="button" className="btn btn--tertiary btn--sm" style={{ marginTop: 6 }} onClick={toast.action.run}>
+                {toast.action.label}
+              </button>
             ) : null}
           </div>
-          <IconButton label="Dismiss" size="sm" icon={<X size={15} />} onClick={() => dismiss(toast.id)} />
+          <button type="button" className="icon-btn" onClick={() => dismiss(toast.id)} aria-label="Dismiss notification">
+            <X size={15} />
+          </button>
         </div>
       ))}
     </div>
   )
 }
 
-export function toast(kind: ToastKind, title: string, message?: string, action?: { label: string, run: () => void }): string {
-  return useAppStore.getState().pushToast({ kind, title, message, action })
-}
-
-/* --------------------------------------------- Confirmation / prompt dialogs */
+/* ------------------------------------------------- Confirmation dialogs */
 
 export interface ConfirmOptions {
   title: string
-  message: string
-  detail?: string
+  message: ReactNode
+  detail?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
-  /** Require the operator to type this phrase before the confirm button enables. */
+  /** Operator must type this exact phrase to enable the confirm button (extreme operations). */
   confirmationPhrase?: string
-  /** Extra guard: re-authentication by password (handled by the caller). */
-  consequenceList?: string[]
+  /** Optional list of consequences shown as bullets. */
+  consequences?: string[]
+  /** Additional custom body rendered inside the dialog (selects, notes). */
+  body?: ReactNode
+  render?(close: (result: ConfirmResponse) => void): ReactNode
 }
 
-interface DialogRequest extends ConfirmOptions {
-  kind: 'confirm' | 'prompt'
-  resolve(value: boolean | string | null): void
+export interface ConfirmResponse {
+  confirmed: boolean
+  /** Text entered when `confirmationPhrase` was required. */
+  phrase?: string
+  /** Free text captured by custom bodies. */
+  values?: Record<string, string>
 }
 
-interface DialogState {
-  request: DialogRequest | null
-  open(request: DialogRequest): void
-  close(value: boolean | string | null): void
+interface PendingDialog extends ConfirmOptions {
+  resolve(response: ConfirmResponse): void
 }
 
-const useDialogStore = create<DialogState>((set, get) => ({
-  request: null,
-  open: (request) => set({ request }),
-  close: (value) => {
-    get().request?.resolve(value)
-    set({ request: null })
-  }
-}))
+let pending: PendingDialog | null = null
+const listeners = new Set<(dialog: PendingDialog | null) => void>()
 
-export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    useDialogStore.getState().open({ ...options, kind: 'confirm', resolve: (value) => resolve(value === true) })
+function setPending(dialog: PendingDialog | null): void {
+  pending = dialog
+  for (const listener of listeners) listener(dialog)
+}
+
+/** Ask for confirmation; resolves with the operator's decision. Never resolves twice. */
+export function confirmDialog(options: ConfirmOptions): Promise<ConfirmResponse> {
+  return new Promise<ConfirmResponse>((resolve) => {
+    if (pending) pending.resolve({ confirmed: false })
+    setPending({ ...options, resolve })
   })
 }
 
-export function promptDialog(options: ConfirmOptions): Promise<string | null> {
-  return new Promise<string | null>((resolve) => {
-    useDialogStore.getState().open({ ...options, kind: 'prompt', resolve: (value) => resolve(typeof value === 'string' ? value : null) })
-  })
-}
-
-export function DialogHost(): ReactNode {
-  const request = useDialogStore((state) => state.request)
-  const close = useDialogStore((state) => state.close)
+export function ConfirmDialogHost(): ReactNode {
+  const [dialog, setDialog] = useState<PendingDialog | null>(pending)
   const [typed, setTyped] = useState('')
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    setTyped('')
-  }, [request])
+    const listener = (next: PendingDialog | null): void => {
+      setTyped('')
+      setDialog(next)
+    }
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }, [])
 
-  if (!request) return null
-  const phrase = request.confirmationPhrase
-  const phraseSatisfied = !phrase || typed.trim().toLowerCase() === phrase.trim().toLowerCase()
+  if (!dialog) return null
+
+  const finish = (response: ConfirmResponse): void => {
+    const resolve = dialog.resolve
+    setPending(null)
+    resolve(response)
+  }
+
+  const phraseOk = !dialog.confirmationPhrase || typed.trim().toLowerCase() === dialog.confirmationPhrase.trim().toLowerCase()
 
   return (
     <Modal
       open
-      size="md"
-      title={request.title}
-      onClose={() => close(request.kind === 'prompt' ? null : false)}
+      size={dialog.render ? 'xl' : 'md'}
+      busy={busy}
+      title={dialog.title}
+      onClose={() => finish({ confirmed: false })}
       footer={
         <>
-          <Button variant="secondary" onClick={() => close(request.kind === 'prompt' ? null : false)}>
-            {request.cancelLabel ?? 'Cancel'}
-          </Button>
-          <Button
-            variant={request.danger ? 'danger' : 'primary'}
-            disabled={!phraseSatisfied || (request.kind === 'prompt' && typed.trim().length === 0)}
-            onClick={() => close(request.kind === 'prompt' ? typed : true)}
+          <button type="button" className="btn btn--tertiary" onClick={() => finish({ confirmed: false })} disabled={busy}>
+            {dialog.cancelLabel ?? 'Cancel'}
+          </button>
+          <button
+            type="button"
+            className={`btn ${dialog.danger ? 'btn--danger' : 'btn--primary'}`}
+            disabled={!phraseOk || busy}
+            onClick={() => {
+              setBusy(true)
+              finish({ confirmed: true, phrase: typed })
+              setBusy(false)
+            }}
           >
-            {request.confirmLabel ?? 'Continue'}
-          </Button>
+            {busy ? <Loader2 size={16} className="spin" /> : null}
+            {dialog.confirmLabel ?? 'Continue'}
+          </button>
         </>
       }
     >
       <div className="stack">
-        <p>{request.message}</p>
-        {request.detail ? <p className="muted small">{request.detail}</p> : null}
-        {request.consequenceList && request.consequenceList.length > 0 ? (
-          <ul className="small" style={{ margin: 0, paddingLeft: 18, color: 'var(--text-muted)' }}>
-            {request.consequenceList.map((item) => (
+        <div>{dialog.message}</div>
+        {dialog.detail ? <div className="muted small">{dialog.detail}</div> : null}
+        {dialog.consequences && dialog.consequences.length > 0 ? (
+          <ul className="disk-list">
+            {dialog.consequences.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
         ) : null}
-        {phrase ? (
+        {dialog.body}
+        {dialog.confirmationPhrase ? (
           <label className="field">
             <span className="field__label">
-              Type <strong>{phrase}</strong> to confirm
+              Type <strong>{dialog.confirmationPhrase}</strong> to proceed
             </span>
             <input className="field__input" value={typed} onChange={(event) => setTyped(event.target.value)} autoFocus aria-label="Confirmation phrase" />
           </label>
@@ -289,52 +293,12 @@ export function DialogHost(): ReactNode {
   )
 }
 
-/* --------------------------------------------------------------- Popover menu */
-
-export function PopoverMenu({
-  trigger,
-  children,
-  align = 'right'
-}: {
-  trigger: (props: { open: boolean, toggle(): void }) => ReactNode
-  children: ReactNode
-  align?: 'left' | 'right'
-}): ReactNode {
-  const [open, setOpen] = useState(false)
-  const container = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (event: MouseEvent): void => {
-      if (!container.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    document.addEventListener('keydown', escape)
-    return () => {
-      document.removeEventListener('mousedown', handler)
-      document.removeEventListener('keydown', escape)
-    }
-  }, [open])
-
-  return (
-    <div className="popover-anchor" ref={container}>
-      {trigger({ open, toggle: () => setOpen((value) => !value) })}
-      {open ? (
-        <div className="menu" style={align === 'left' ? { left: 0, right: 'auto' } : undefined} role="menu" onClick={() => setOpen(false)}>
-          {children}
-        </div>
-      ) : null}
-    </div>
-  )
+/** Convenience wrappers used across screens. */
+export async function confirmDanger(options: ConfirmOptions): Promise<boolean> {
+  const response = await confirmDialog({ ...options, danger: true })
+  return response.confirmed
 }
 
-export function Tooltip({ label, children }: { label: string, children: ReactNode }): ReactNode {
-  return (
-    <span title={label} aria-label={label}>
-      {children}
-    </span>
-  )
+export function toast(kind: 'success' | 'error' | 'warning' | 'info', title: string, message?: string): void {
+  useAppStore.getState().pushToast({ kind, title, message })
 }

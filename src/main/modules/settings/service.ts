@@ -1,7 +1,7 @@
 import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
 import { AppError, notFoundError, validationError } from '@shared/errors'
-import { SETTING_DEFS, SETTING_DEFAULTS, isKnownSetting, settingDef } from './defaults'
+import { SETTING_DEFS, SETTING_DEFAULTS, displaySettings, isKnownSetting, settingDef } from './defaults'
 import { isValidLocalDate } from '@shared/datetime'
 import { sanitizePrefix } from '@shared/identifiers'
 import { normalizeBengali } from '@shared/bengali'
@@ -42,6 +42,20 @@ export function getSetting(ctx: ServiceContext, key: string): string {
   if (!isKnownSetting(key)) throw validationError(`Unknown setting: ${key}`)
   const row = ctx.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined
   return row?.value ?? SETTING_DEFAULTS[key] ?? ''
+}
+
+/**
+ * Display-only settings for the renderer bootstrap: formats, density, working hours. Readable before
+ * sign-in and by every role, because the interface cannot render a date or a table without them.
+ */
+export function getDisplaySettings(ctx: ServiceContext): SettingsMap {
+  const defaults = displaySettings(SETTING_DEFAULTS)
+  const rows = ctx.db.prepare('SELECT key, value FROM settings').all() as Array<{ key: string, value: string }>
+  const stored: SettingsMap = {}
+  for (const row of rows) {
+    if (row.key in defaults) stored[row.key] = row.value
+  }
+  return { ...defaults, ...stored }
 }
 
 export function getSettingSafe(ctx: ServiceContext, key: string, fallback = ''): string {

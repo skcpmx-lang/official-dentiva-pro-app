@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { channel, zLocalDate, zOptionalText, zRangePreset, zTrimmed } from '../ipc'
+import { channel, zExportResult, zLocalDate, zOptionalText, zRangePreset, zTrimmed } from '../ipc'
 
 /* -------------------------------------------------------------------------- */
 /* Shared value objects                                                       */
@@ -268,6 +268,13 @@ export const zAboutInfo = z.object({
 /* -------------------------------------------------------------------------- */
 
 export type BuildInfo = z.output<typeof zBuildInfo>
+export type ClinicProfile = z.output<typeof zClinicProfile>
+export type ActivationState = z.output<typeof zActivationState>
+export type SetupStatus = z.output<typeof zSetupStatus>
+export type SetupSummary = z.output<typeof zSetupSummary>
+export type Dentist = z.output<typeof zDentist>
+export type LoginResult = z.output<typeof zLoginResult>
+export type DiagnosticsReport = z.output<typeof zDiagnostics>
 export type MachineInfo = z.output<typeof zMachineInfo>
 export type SessionSummary = z.output<typeof zSessionSummary>
 export type SessionState = z.output<typeof zSessionState>
@@ -287,7 +294,11 @@ export const systemChannels = {
       clinic: zClinicProfile.nullable(),
       activation: zActivationState,
       setup: zSetupStatus,
-      maintenanceMode: z.boolean()
+      maintenanceMode: z.boolean(),
+      /** Display-only settings, readable before sign-in (formats, density, landing page). */
+      settings: z.record(z.string(), z.string()),
+      /** Present when a session already exists for this window (unlock screen, reload). */
+      session: zSessionSummary.nullable()
     })
   ),
   'app.environment': channel(
@@ -334,6 +345,7 @@ export const systemChannels = {
 
   'audit.list': channel(zAuditFilter, zAuditPage),
   'audit.facets': channel(z.object({}).default({}), zAuditFacets),
+  'audit.export': channel(zAuditFilter, zExportResult),
   'audit.forEntity': channel(
     z.object({ entityType: z.string().min(1).max(40), entityId: z.number().int().positive(), limit: z.number().int().min(1).max(200).default(20) }),
     z.array(zAuditEntry)

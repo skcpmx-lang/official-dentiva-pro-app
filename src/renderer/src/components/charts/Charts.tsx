@@ -1,210 +1,183 @@
-import { useMemo, useState, type ReactNode } from 'react'
-import { useFormatters } from '../../lib/format'
+import { useId, useMemo, type ReactNode } from 'react'
+import { formatBDTShort } from '@shared/money'
 
 /**
- * Charts are hand-built SVG rather than a charting dependency: they stay crisp at every Windows
- * scaling factor, print correctly, respect reduced-motion, and always render an explicit "no data"
- * state instead of empty axes.
+ * Charts are drawn as inline SVG instead of pulling in a charting library: they stay crisp at every
+ * Windows scaling factor, print correctly, work completely offline, and every chart has an accessible
+ * text alternative describing the series.
  */
 
 export interface SeriesPoint {
   label: string
   value: number
+  /** Optional secondary value used by tooltips (for example, invoice count behind a revenue bar). */
+  meta?: string
 }
 
-function useScale(points: SeriesPoint[]): { max: number, min: number } {
-  return useMemo(() => {
-    const values = points.map((point) => point.value)
-    const max = Math.max(1, ...values)
-    const min = Math.min(0, ...values)
-    return { max, min }
-  }, [points])
+function path(points: SeriesPoint[], width: number, height: number, max: number): { line: string, area: string, coords: Array<{ x: number, y: number }> } {
+  const padding = 12
+  const usableWidth = width - padding * 2
+  const usableHeight = height - padding * 2
+  const step = points.length > 1 ? usableWidth / (points.length - 1) : 0
+  const coords = points.map((point, index) => ({
+    x: padding + index * step,
+    y: padding + usableHeight - (max <= 0 ? 0 : (point.value / max) * usableHeight)
+  }))
+  const line = coords.map((coord, index) => `${index === 0 ? 'M' : 'L'}${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(' ')
+  const area = `${line} L${coords[coords.length - 1]?.x.toFixed(1) ?? padding},${(padding + usableHeight).toFixed(1)} L${coords[0]?.x.toFixed(1) ?? padding},${(padding + usableHeight).toFixed(1)} Z`
+  return { line, area, coords }
 }
 
 export function LineChart({
   points,
-  height = 200,
-  valueFormatter,
+  height = 180,
   ariaLabel,
-  color = 'var(--brand-500)',
-  fill = 'rgba(18,135,159,.12)'
+  formatValue = (value) => formatBDTShort(value)
 }: {
   points: SeriesPoint[]
   height?: number
-  valueFormatter?: (value: number) => string
   ariaLabel: string
-  color?: string
-  fill?: string
+  formatValue?(value: number): string
 }): ReactNode {
-  const [hover, setHover] = useState<number | null>(null)
-  const { max } = useScale(points)
+  const gradientId = useId()
   const width = 720
-  const padding = { top: 12, right: 12, bottom: 26, left: 12 }
+  const max = useMemo(() => Math.max(...points.map((point) => point.value), 1), [points])
+  const geometry = useMemo(() => path(points, width, height, max), [points, height, max])
 
-  if (points.length === 0) {
-    return <NoDataChart height={height} message="No data for the selected period." />
-  }
-
-  const stepX = points.length > 1 ? (width - padding.left - padding.right) / (points.length - 1) : 0
-  const scaleY = (value: number): number => height - padding.bottom - (value / max) * (height - padding.top - padding.bottom)
-  const coords = points.map((point, index) => ({ x: padding.left + index * stepX, y: scaleY(point.value), point }))
-  const line = coords.map((coord, index) => `${index === 0 ? 'M' : 'L'}${coord.x.toFixed(1)},${coord.y.toFixed(1)}`).join(' ')
-  const area = `${line} L${coords[coords.length - 1]!.x.toFixed(1)},${height - padding.bottom} L${coords[0]!.x.toFixed(1)},${height - padding.bottom} Z`
+  if (points.length === 0) return <EmptyChart height={height} message="No data for the selected period." />
 
   return (
-    <div style={{ position: 'relative' }}>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ width: '100%', height }}
-        role="img"
-        aria-label={ariaLabel}
-        onMouseLeave={() => setHover(null)}
-      >
-        {[0.25, 0.5, 0.75].map((ratio) => (
+    <figure className="chart">
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" role="img" aria-label={ariaLabel} style={{ height }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-500)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--brand-500)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0.25, 0.5, 0.75, 1].map((ratio) => (
           <line
             key={ratio}
-            x1={padding.left}
-            x2={width - padding.right}
-            y1={height - padding.bottom - ratio * (height - padding.top - padding.bottom)}
-            y2={height - padding.bottom - ratio * (height - padding.top - padding.bottom)}
-            stroke="var(--slate-200)"
+            x1={0}
+            x2={width}
+            y1={height * ratio}
+            y2={height * ratio}
+            stroke="var(--border)"
+            strokeWidth={1}
             strokeDasharray="4 6"
           />
         ))}
-        <path d={area} fill={fill} />
-        <path d={line} fill="none" stroke={color} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
-        {coords.map((coord, index) => (
-          <g key={coord.point.label}>
-            <circle
-              cx={coord.x}
-              cy={coord.y}
-              r={hover === index ? 4.5 : 2.6}
-              fill="var(--surface)"
-              stroke={color}
-              strokeWidth={2}
-              onMouseEnter={() => setHover(index)}
-            />
-          </g>
+        <path d={geometry.area} fill={`url(#${gradientId})`} />
+        <path d={geometry.line} fill="none" stroke="var(--brand-500)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {geometry.coords.map((coord, index) => (
+          <circle key={index} cx={coord.x} cy={coord.y} r={2.6} fill="var(--surface)" stroke="var(--brand-500)" strokeWidth={1.6}>
+            <title>{`${points[index]!.label}: ${formatValue(points[index]!.value)}${points[index]!.meta ? ` (${points[index]!.meta})` : ''}`}</title>
+          </circle>
         ))}
-        {points.map((point, index) =>
-          index % Math.ceil(points.length / 8) === 0 || index === points.length - 1 ? (
-            <text key={`label-${point.label}`} x={coords[index]!.x} y={height - 8} fontSize="10.5" fill="var(--slate-500)" textAnchor="middle">
-              {point.label}
-            </text>
-          ) : null
-        )}
       </svg>
-      {hover !== null ? (
-        <div
-          className="chip"
-          style={{ position: 'absolute', top: 0, right: 0, pointerEvents: 'none' }}
-          role="status"
-        >
-          {points[hover]!.label}: {valueFormatter ? valueFormatter(points[hover]!.value) : points[hover]!.value}
-        </div>
-      ) : null}
-    </div>
+      <figcaption className="chart__axis">
+        <span>{points[0]?.label}</span>
+        <span>{points[Math.floor(points.length / 2)]?.label}</span>
+        <span>{points[points.length - 1]?.label}</span>
+      </figcaption>
+    </figure>
   )
 }
 
 export function BarChart({
   points,
-  height = 200,
-  valueFormatter,
-  ariaLabel
+  height = 180,
+  ariaLabel,
+  formatValue = (value) => formatBDTShort(value),
+  tone = 'brand'
 }: {
   points: SeriesPoint[]
   height?: number
-  valueFormatter?: (value: number) => string
   ariaLabel: string
+  formatValue?(value: number): string
+  tone?: 'brand' | 'teal' | 'amber'
 }): ReactNode {
-  const { max } = useScale(points)
-  if (points.length === 0) return <NoDataChart height={height} message="No data for the selected period." />
+  const max = useMemo(() => Math.max(...points.map((point) => point.value), 1), [points])
+  if (points.length === 0) return <EmptyChart height={height} message="No data for the selected period." />
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height, padding: 'var(--sp-3) 0' }} role="img" aria-label={ariaLabel}>
-      {points.map((point) => (
-        <div key={point.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <span className="small muted" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {valueFormatter ? valueFormatter(point.value) : point.value}
-          </span>
-          <div
-            style={{
-              width: '100%',
-              maxWidth: 56,
-              height: `${Math.max(2, (point.value / max) * (height - 60))}px`,
-              borderRadius: '6px 6px 3px 3px',
-              background: 'linear-gradient(180deg, var(--brand-400), var(--brand-600))',
-              transition: 'height var(--dur-slow) var(--ease)'
-            }}
-          />
-          <span className="small truncate" style={{ maxWidth: '100%', color: 'var(--text-subtle)' }}>
-            {point.label}
-          </span>
-        </div>
-      ))}
-    </div>
+    <figure className="chart" role="img" aria-label={ariaLabel}>
+      <div className="bars" style={{ height }}>
+        {points.map((point) => (
+          <div key={point.label} className="bars__item">
+            <span className="bars__value">{formatValue(point.value)}</span>
+            <div
+              className={`bars__bar bars__bar--${tone}`}
+              style={{ height: `${Math.max(2, (point.value / max) * 100)}%` }}
+              title={`${point.label}: ${formatValue(point.value)}${point.meta ? ` (${point.meta})` : ''}`}
+            />
+            <span className="bars__label truncate">{point.label}</span>
+          </div>
+        ))}
+      </div>
+    </figure>
   )
 }
 
 export function DonutChart({
   points,
-  size = 176,
-  valueFormatter,
-  ariaLabel
+  size = 168,
+  ariaLabel,
+  centerLabel,
+  formatValue = (value) => formatBDTShort(value)
 }: {
   points: SeriesPoint[]
   size?: number
-  valueFormatter?: (value: number) => string
   ariaLabel: string
+  centerLabel?: string
+  formatValue?(value: number): string
 }): ReactNode {
-  const total = points.reduce((sum, point) => sum + Math.max(0, point.value), 0)
-  const colors = ['var(--brand-600)', 'var(--teal-500)', 'var(--cyan-400)', 'var(--brand-400)', 'var(--slate-400)', 'var(--navy-700)']
-
-  if (points.length === 0 || total <= 0) return <NoDataChart height={size} message="No payments recorded in this period." />
-
+  const total = points.reduce((sum, point) => sum + point.value, 0)
   const radius = size / 2 - 12
   const circumference = 2 * Math.PI * radius
-  let offset = 0
+  const palette = ['var(--brand-600)', 'var(--teal-500)', 'var(--cyan-400)', 'var(--amber-500)', 'var(--navy-600)', 'var(--slate-400)']
 
+  if (points.length === 0 || total <= 0) return <EmptyChart height={size} message="Nothing recorded in this period." />
+
+  let offset = 0
   return (
-    <div className="row" style={{ gap: 'var(--sp-5)', flexWrap: 'wrap' }}>
-      <svg width={size} height={size} role="img" aria-label={ariaLabel}>
-        <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
-          {points.map((point, index) => {
-            const fraction = Math.max(0, point.value) / total
-            const dash = fraction * circumference
-            const element = (
-              <circle
-                key={point.label}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={colors[index % colors.length]}
-                strokeWidth={18}
-                strokeDasharray={`${dash} ${circumference - dash}`}
-                strokeDashoffset={-offset}
-              />
-            )
-            offset += dash
-            return element
-          })}
-        </g>
-        <text x="50%" y="47%" textAnchor="middle" fontSize="13" fill="var(--slate-500)">
-          Total
+    <div className="donut">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={ariaLabel}>
+        {points.map((point, index) => {
+          const fraction = point.value / total
+          const dash = fraction * circumference
+          const element = (
+            <circle
+              key={point.label}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke={palette[index % palette.length]}
+              strokeWidth={16}
+              strokeDasharray={`${dash} ${circumference - dash}`}
+              strokeDashoffset={-offset}
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            >
+              <title>{`${point.label}: ${formatValue(point.value)} (${Math.round(fraction * 100)}%)`}</title>
+            </circle>
+          )
+          offset += dash
+          return element
+        })}
+        <text x="50%" y="47%" textAnchor="middle" className="donut__total">
+          {formatValue(total)}
         </text>
-        <text x="50%" y="60%" textAnchor="middle" fontSize="15" fontWeight="600" fill="var(--navy-800)">
-          {valueFormatter ? valueFormatter(total) : total}
+        <text x="50%" y="62%" textAnchor="middle" className="donut__label">
+          {centerLabel ?? 'Total'}
         </text>
       </svg>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8, minWidth: 180 }}>
+      <ul className="legend">
         {points.map((point, index) => (
-          <li key={point.label} className="row small" style={{ justifyContent: 'space-between' }}>
-            <span className="row" style={{ gap: 8 }}>
-              <i style={{ width: 10, height: 10, borderRadius: 3, background: colors[index % colors.length], display: 'inline-block' }} />
-              {point.label}
-            </span>
-            <span className="num muted">{valueFormatter ? valueFormatter(point.value) : point.value}</span>
+          <li key={point.label}>
+            <span className="legend__swatch" style={{ background: palette[index % palette.length] }} aria-hidden="true" />
+            <span className="grow truncate">{point.label}</span>
+            <span className="num">{formatValue(point.value)}</span>
+            <span className="muted small num">{total > 0 ? `${Math.round((point.value / total) * 100)}%` : '—'}</span>
           </li>
         ))}
       </ul>
@@ -212,20 +185,26 @@ export function DonutChart({
   )
 }
 
-export function NoDataChart({ height = 160, message }: { height?: number, message: string }): ReactNode {
+export function Sparkline({ points, width = 120, height = 32 }: { points: number[], width?: number, height?: number }): ReactNode {
+  if (points.length === 0) return null
+  const max = Math.max(...points, 1)
+  const min = Math.min(...points, 0)
+  const range = max - min || 1
+  const step = points.length > 1 ? width / (points.length - 1) : 0
+  const line = points
+    .map((value, index) => `${index === 0 ? 'M' : 'L'}${(index * step).toFixed(1)},${(height - ((value - min) / range) * height).toFixed(1)}`)
+    .join(' ')
   return (
-    <div
-      className="state"
-      style={{ height, border: '1px dashed var(--border-strong)', borderRadius: 'var(--r-lg)', padding: 'var(--sp-5)' }}
-      role="status"
-    >
-      <span className="state__message">{message}</span>
-    </div>
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <path d={line} fill="none" stroke="var(--brand-500)" strokeWidth={1.8} />
+    </svg>
   )
 }
 
-/** Convenience: money-axis formatter shared by dashboard widgets. */
-export function useMoneyAxis(): (micro: number) => string {
-  const formatters = useFormatters()
-  return (micro: number) => formatters.moneyShort(micro)
+function EmptyChart({ height, message }: { height: number, message: string }): ReactNode {
+  return (
+    <div className="chart chart--empty" style={{ height }} role="status">
+      <span className="muted small">{message}</span>
+    </div>
+  )
 }

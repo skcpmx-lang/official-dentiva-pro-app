@@ -362,17 +362,20 @@ export function Checkbox({
   onChange,
   label,
   disabled,
-  name
+  name,
+  id
 }: {
   checked: boolean
   onChange(checked: boolean): void
   label: ReactNode
   disabled?: boolean
   name?: string
+  id?: string
 }): ReactNode {
   return (
-    <label className="checkbox">
+    <label className="checkbox" htmlFor={id}>
       <input
+        id={id}
         type="checkbox"
         name={name}
         checked={checked}
