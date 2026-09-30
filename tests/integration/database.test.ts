@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createHarness } from './helpers'
 import { openDatabase } from '@main/db/connection'
@@ -77,6 +79,53 @@ describe('database bootstrap', () => {
     } finally {
       harness.cleanup()
     }
+  })
+
+  it('keeps one prepared statement per distinct SQL text and bounds the cache', () => {
+    const harness = createHarness()
+    try {
+      const { db } = harness.database
+      const sql = 'SELECT COUNT(*) AS count FROM patients'
+      const first = db.prepare(sql)
+
+      /* The same SQL must come back as the same statement: re-preparing it for every call is what made
+         the process accumulate native memory without bound on the stress dataset. */
+      expect(db.prepare(sql)).toBe(first)
+
+      /* Filtered list queries build their SQL per call, so the cache size follows the number of distinct
+         statements the clinic has issued, not the number of calls. */
+      for (let index = 0; index < 60; index += 1) db.prepare(`SELECT ${index} AS value`).get()
+      expect(harness.database.statementCacheSize()).toBeLessThanOrEqual(500)
+      expect(harness.database.statementCacheSize()).toBeGreaterThanOrEqual(60)
+    } finally {
+      harness.cleanup()
+    }
+  })
+
+  it('does not reconfigure prepared statements, which the shared cache depends on', () => {
+    /* Statements are cached per SQL text, so a statement reconfigured with `.raw()`, `.pluck()` or
+       `.expand()` would hand its changed row shape to the next caller of the same SQL. */
+    const offenders: string[] = []
+    const walk = (directory: string): void => {
+      for (const entry of readdirSync(directory)) {
+        const path = join(directory, entry)
+        if (statSync(path).isDirectory()) {
+          walk(path)
+          continue
+        }
+        if (!path.endsWith('.ts')) continue
+        /* Comments may name the calls; only real code counts. */
+        const source = readFileSync(path, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/(^|\s)\/\/.*$/gm, '')
+        for (const call of ['.raw()', '.pluck()', '.expand()']) {
+          if (source.includes(call)) offenders.push(`${path}${call}`)
+        }
+      }
+    }
+    walk('src/main')
+    walk('src/shared')
+    expect(offenders).toEqual([])
   })
 
   it('keeps the audit log append-only at the database level', () => {

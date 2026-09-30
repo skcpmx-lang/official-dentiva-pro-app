@@ -8,6 +8,59 @@ import { seedDatabase } from './seed'
 
 export type Db = Database.Database
 
+/**
+ * How many distinct SQL statements one connection keeps prepared.
+ *
+ * better-sqlite3 (like every SQLite binding) gives a prepared statement native memory that is released
+ * only when the statement is garbage collected, and it is released lazily. Preparing the same SQL again
+ * for every call therefore made the process grow without bound: measured on the stress dataset, roughly
+ * 77 KB of native memory per write, so a clinic that recorded a year of work in one shift would have
+ * seen the application slow down and eventually run out of memory. Keeping statements prepared is also
+ * what SQLite is built for — it skips parsing and planning on every call.
+ *
+ * 500 is far above the number of distinct statements the application has (a few hundred, including the
+ * filtered list queries whose text varies with the filters in force), so in practice nothing is evicted
+ * twice; the bound only exists so a pathological caller cannot grow the cache for ever.
+ */
+const STATEMENT_CACHE_LIMIT = 500
+
+/**
+ * Wrap a connection so that `prepare` reuses statements, keyed by their SQL text.
+ *
+ * The cache lives exactly as long as the connection. Statements must not be reconfigured through
+ * `.raw()`, `.pluck()` or `.expand()` — those change the shape of the rows the statement returns, and a
+ * reconfigured statement handed to another caller would read wrongly. No module does this (the
+ * codebase prepares plain statements and maps rows in TypeScript), and `database.test.ts` guards it.
+ */
+function cacheStatements(db: Db): { db: Db, cacheSize: () => number, clear: () => void } {
+  const statements = new Map<string, ReturnType<Db['prepare']>>()
+  const proxy = new Proxy(db, {
+    get(target, property) {
+      if (property === 'prepare') {
+        return (sql: string) => {
+          const cached = statements.get(sql)
+          if (cached) {
+            /* Re-insert so the map's insertion order keeps the most recently used statement last. */
+            statements.delete(sql)
+            statements.set(sql, cached)
+            return cached
+          }
+          const statement = target.prepare(sql)
+          if (statements.size >= STATEMENT_CACHE_LIMIT) {
+            const oldest = statements.keys().next().value as string | undefined
+            if (oldest !== undefined) statements.delete(oldest)
+          }
+          statements.set(sql, statement)
+          return statement
+        }
+      }
+      const value = Reflect.get(target, property, target)
+      return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value
+    }
+  })
+  return { db: proxy, cacheSize: () => statements.size, clear: () => statements.clear() }
+}
+
 export interface OpenOptions {
   /** Absolute path of the database file. Parent directories are created automatically. */
   filePath: string
@@ -27,6 +80,8 @@ export interface OpenOptions {
 export interface DatabaseContext {
   readonly db: Db
   readonly filePath: string
+  /** Distinct SQL statements currently kept prepared. Diagnostics for the performance run and health panel. */
+  statementCacheSize(): number
   /** True when a clinic setup has been completed (clinic name present). */
   isClinicInitialised(): boolean
   integrityCheck(): { ok: boolean; messages: string[] }
@@ -110,9 +165,17 @@ export function openDatabase(options: OpenOptions): DatabaseContext {
     })
   }
 
+  /* From here on every caller uses the caching connection. Setup, migrations and seeding above work on
+     the raw handle, which is why the cache is created only once the database is ready. */
+  const connection = cacheStatements(db)
+  const cachedDb = connection.db
+
   return {
-    db,
+    db: cachedDb,
     filePath,
+    statementCacheSize(): number {
+      return connection.cacheSize()
+    },
     isClinicInitialised(): boolean {
       const row = db.prepare('SELECT name FROM clinic WHERE id = 1').get() as { name: string } | undefined
       return Boolean(row && row.name.trim().length > 0)
@@ -143,6 +206,9 @@ export function openDatabase(options: OpenOptions): DatabaseContext {
       }
     },
     close(): void {
+      /* Drop the statements first: their native memory is freed as the statements are collected, and
+         tests open and close many databases in one process. */
+      connection.clear()
       db.close()
     }
   }
