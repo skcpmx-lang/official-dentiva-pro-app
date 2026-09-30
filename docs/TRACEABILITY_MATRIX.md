@@ -106,12 +106,12 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | ADD-07 | Stock valuation + purchase expenditure report | Inventory/Reports | ✅ (`stock_value` report key: on-hand quantity and value per item with totals; purchase spend is reported through `expenses_category` and the supplier roll-ups; reporting is screen + CSV, the PDF job arrives with printing) |
 | ADD-08 | Permission-aware CSV/PDF export per module | Data | ⏳ |
 | ADD-09 | Documented data directory & uninstall behaviour | Release | ⏳ |
-| ADD-10 | Recovery mode on DB failure | Platform | ⏳ |
+| ADD-10 | Recovery mode on DB failure | Platform | ✅ (`main/startup/state.ts` tracks starting/recovery/ready with a reason written for the operator; `app.startupState` is answered by the process before the router is consulted, and `app.openDataFolder`/`app.relaunch` are served the same way so the recovery screen works without a database; the renderer shows the recovery explanation and the actions that still function; `tests/integration/startup-state.test.ts`, `tests/renderer/recovery-ui.test.tsx`) |
 | ADD-11 | Printable patient clinical summary | Printing | ✅ (`patient_summary` layout in `printing/documents.ts`, print action on the patient profile) |
 | ADD-12 | Password change/policy + forced change | Auth | ⏳ |
 | ADD-13 | Idle auto-lock with lock screen | Session | ⏳ |
-| ADD-14 | Dashboard personalisation (per user) | Dashboard | ⏳ |
-| ADD-15 | Notification read/dismiss persistence | Notifications | ✅ (read/dismissed state is written to the `notifications` row and survives the periodic rebuild, because `raiseNotification` updates an existing `dedupe_key` in place instead of reinserting it) |
+| ADD-14 | Dashboard personalisation (per user) | Dashboard | ✅ (per-account dashboard period, panel selection and order from `@shared/preferences`, validated in `modules/preferences/service.ts` and honoured by `features/dashboard/DashboardScreen.tsx`; “recently viewed” records written by the patient, invoice and prescription detail lookups and resolved to titles, dropping anything the operator may no longer open) |
+| ADD-15 | Notification read/dismiss persistence | Notifications | ✅ (read/dismissed state is written to the `notifications` row and survives the periodic rebuild, because `raiseNotification` updates an existing `dedupe_key` in place instead of reinserting it; per-account alert mutes are stored as a preference and never silence a critical alert) |
 | ADD-16 | Maintenance tools (integrity check, vacuum, orphan scan) | Data | ⏳ |
 | ADD-17 | System event log | Platform | ⏳ |
 | ADD-18 | Local diagnostic bundle (no telemetry) | Support | ⏳ |
