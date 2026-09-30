@@ -25,6 +25,11 @@ export interface RouterDependencies {
   sessions: SessionManager
   /** Called when the renderer must be told something (lock, permission refresh, data changed). */
   emit?: (webContentsId: number, event: string, payload: unknown) => void
+  /**
+   * True while a restore is replacing the database. Every non-public channel outside the backup
+   * namespace is refused so a second window cannot write into a database that is being swapped.
+   */
+  isMaintenanceMode?: () => boolean
 }
 
 /** Small TTL cache for actors so a burst of IPC calls does not re-derive permissions repeatedly. */
@@ -93,6 +98,9 @@ export class IpcRouter {
       if (!handler) throw new AppError('E_UNSUPPORTED', 'This action is not available in this version of Dentiva Pro.', { detail: { channelId } })
 
       const publicChannel = isPublicChannel(channelId)
+      if (this.deps.isMaintenanceMode?.() && !publicChannel && !channelId.startsWith('backups.')) {
+        throw new AppError('E_STATE', 'The clinic data is being restored. Please wait — this window will refresh when the restore finishes.')
+      }
       const session = sessions.get(webContentsId)
 
       if (!publicChannel && !session) throw new AppError('E_UNAUTHENTICATED', 'Your session has ended. Please sign in again.')

@@ -15,6 +15,13 @@ export interface OpenOptions {
   now?: () => number
   /** Skip seeding (used by integrity tooling that only inspects structure). */
   skipSeed?: boolean
+  /**
+   * When set, an existing database that is about to be migrated is snapshotted here first
+   * (`pre-migration-v<n>-<stamp>.db`) and registered in `backups`, so a migration can always be undone.
+   */
+  backupDir?: string
+  /** Recorded on the pre-migration snapshot; supplied by the host build info. */
+  appVersion?: string
 }
 
 export interface DatabaseContext {
@@ -72,6 +79,10 @@ export function openDatabase(options: OpenOptions): DatabaseContext {
     if (version === 0) {
       db.exec(SCHEMA_V1_SQL)
       db.exec(SCHEMA_V1_POST_SQL)
+    }
+    const pending = MIGRATIONS.filter((migration) => migration.version > readSchemaVersion(db))
+    if (version > 0 && pending.length > 0 && options.backupDir) {
+      takePreMigrationSnapshot(db, options.backupDir, pending[pending.length - 1]!.version, now(), options.appVersion ?? '')
     }
     for (const migration of MIGRATIONS) {
       if (migration.version <= readSchemaVersion(db)) continue
@@ -140,4 +151,38 @@ export function openDatabase(options: OpenOptions): DatabaseContext {
 /** Location of the SQLite file inside a data directory. */
 export function databasePath(dataDir: string): string {
   return join(dataDir, 'data', 'dentiva.db')
+}
+
+/**
+ * Copies the database aside before a migration runs. The snapshot is a plain SQLite file taken with
+ * `VACUUM INTO`, so it can be restored even if this build is later replaced; it is registered in the
+ * `backups` table when that table exists so the printing screen can show it like any other backup.
+ */
+function takePreMigrationSnapshot(db: Db, backupDir: string, targetVersion: number, at: number, appVersion: string): void {
+  try {
+    if (!existsSync(backupDir)) mkdirSync(backupDir, { recursive: true })
+    const date = new Date(at)
+    const pad = (value: number): string => String(value).padStart(2, '0')
+    const stamp = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+    const target = join(backupDir, `pre-migration-v${targetVersion}-${stamp}.db`)
+    db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`)
+    if (!existsSync(target)) return
+    try {
+      db.prepare(
+        `INSERT INTO backups (file_name, file_path, kind, size_bytes, checksum, schema_version, app_version, created_at, verified, includes_attachments, note)
+         VALUES (?, ?, 'pre_migration', ?, NULL, ?, ?, ?, 1, 0, 'Automatic snapshot taken before a schema migration')`
+      ).run(
+        target.split(/[\\/]/).pop() ?? target,
+        target,
+        statSync(target).size,
+        targetVersion - 1 >= 0 ? targetVersion - 1 : 0,
+        appVersion,
+        at
+      )
+    } catch {
+      /* the backups table may not exist on very old databases; the file itself is the protection */
+    }
+  } catch {
+    /* a snapshot failure must never block the application from starting */
+  }
 }

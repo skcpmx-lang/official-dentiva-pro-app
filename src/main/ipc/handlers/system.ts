@@ -28,8 +28,18 @@ export interface HandlerDeps {
   refreshAutoLock(): void
   /** True while the database is being replaced by a restore. */
   isMaintenanceMode(): boolean
+  /** Turn maintenance mode on/off while a restore replaces the database. */
+  setMaintenanceMode(value: boolean): void
   /** Restart the application (used after restore). */
   relaunch(): void
+  /** The live database handle at the moment of the call; it changes after a restore reopens the database. */
+  currentDb(): Db | null
+  /** Close the live database so its files can be replaced by a restore. */
+  closeDatabase(): void
+  /** Re-open the database after a restore; false when it could not be opened. */
+  reopenDatabase(): boolean
+  /** Integrity check, relationship check and row counts of the database that is open right now. */
+  inspectDatabase(): { ok: boolean, problems: string[], counts: Record<string, number> }
 }
 
 function systemActor(): Actor {

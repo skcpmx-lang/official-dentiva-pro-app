@@ -15,6 +15,9 @@ import { createBillingHandlers } from './ipc/handlers/billing'
 import { createInventoryHandlers } from './ipc/handlers/inventory'
 import { createAccountingHandlers } from './ipc/handlers/accounting'
 import { createPrintingHandlers } from './ipc/handlers/printing'
+import { createBackupHandlers } from './ipc/handlers/backup'
+import { liveRowCounts, runScheduledBackup } from './backup/service'
+import { createServiceContext, SYSTEM_ACTOR } from './context'
 import { verifyActivationIntegrity } from './activation/service'
 import { AppError, describeErrorForLog } from '@shared/errors'
 import type { HostServices } from './platform/types'
@@ -94,13 +97,19 @@ function refreshAutoLockTimer(): void {
 function openDatabaseSafely(): void {
   if (!host) return
   try {
-    database = openDatabase({ filePath: host.paths.databaseFile, now: () => host!.now() })
+    database = openDatabase({
+      filePath: host.paths.databaseFile,
+      now: () => host!.now(),
+      backupDir: host.paths.defaultBackupDir,
+      appVersion: host.build.version
+    })
     recoveryReason = null
     const integrity = verifyActivationIntegrity(database.db)
     if (integrity.invalidated) {
       host.logger.warn('Activation state failed its integrity check and was reset')
     }
     host.machine.printersAvailable = true
+    markInterruptedRestores()
     host.logger.info('Database opened', { schemaVersion: database.integrityCheck().ok ? 'ok' : 'warning' })
   } catch (error) {
     recoveryReason =
@@ -109,6 +118,29 @@ function openDatabaseSafely(): void {
         : 'The clinic database could not be opened. Your data has not been changed.'
     host.logger.error('Database could not be opened — entering recovery mode', error)
     database = null
+  }
+}
+
+/**
+ * A restore writes an `in_progress` row before it touches any file. If the process died mid-restore that
+ * row survives in whichever database is now on disk, so it is closed out here with an honest message
+ * instead of leaving a permanently running restore in the history.
+ */
+function markInterruptedRestores(): void {
+  if (!database) return
+  try {
+    const result = database.db
+      .prepare(
+        `UPDATE restore_history
+            SET result = 'failed',
+                message = COALESCE(message, 'The restore was interrupted before it finished.'),
+                finished_at = COALESCE(finished_at, ?)
+          WHERE result = 'in_progress'`
+      )
+      .run(Date.now())
+    if (result.changes > 0) host?.logger.warn('Closed out interrupted restore attempts', { count: result.changes })
+  } catch {
+    /* older databases may not have the table yet */
   }
 }
 
@@ -123,7 +155,20 @@ function handlerDeps(): HandlerDeps {
     broadcast,
     refreshAutoLock: refreshAutoLockTimer,
     isMaintenanceMode: () => maintenanceMode,
-    relaunch
+    setMaintenanceMode: (value) => {
+      maintenanceMode = value
+    },
+    relaunch,
+    currentDb: () => database?.db ?? null,
+    closeDatabase: () => shutdownDatabase(),
+    reopenDatabase: () => reopenDatabase(),
+    inspectDatabase: () => {
+      if (!database) return { ok: false, problems: ['The clinic database is not open.'], counts: {} }
+      const integrity = database.integrityCheck()
+      const foreignKeys = database.foreignKeyCheck()
+      const problems = [...(integrity.ok ? [] : integrity.messages), ...(foreignKeys.ok ? [] : foreignKeys.violations)]
+      return { ok: problems.length === 0, problems, counts: liveRowCounts(database.db) }
+    }
   }
 }
 
@@ -136,7 +181,8 @@ function buildRouter(): IpcRouter {
     emit: (webContentsId, event, payload) => {
       const target = BrowserWindow.getAllWindows().find((window) => window.webContents.id === webContentsId)
       if (target && !target.isDestroyed()) target.webContents.send(IPC_EVENT, event, payload)
-    }
+    },
+    isMaintenanceMode: () => maintenanceMode
   })
   instance.register(createSystemHandlers(deps))
   instance.register(createPracticeHandlers(deps))
@@ -147,6 +193,7 @@ function buildRouter(): IpcRouter {
   instance.register(createInventoryHandlers(deps))
   instance.register(createAccountingHandlers(deps))
   instance.register(createPrintingHandlers(deps))
+  instance.register(createBackupHandlers(deps))
   instance.register(createDashboardHandlers())
   const missing = instance.missingChannels()
   if (missing.length > 0) {
@@ -308,6 +355,7 @@ async function bootstrap(): Promise<void> {
   }
   registerIpc()
   mainWindow = createWindow()
+  scheduleAutomaticBackups()
 
   app.on('window-all-closed', () => {
     shutdownDatabase()
@@ -320,6 +368,32 @@ async function bootstrap(): Promise<void> {
   app.on('activate', () => {
     if (!mainWindow) mainWindow = createWindow()
   })
+}
+
+/**
+ * Runs the automatic backup when one is due. The scheduler runs as the application itself (the audit
+ * trail records the system actor) and only ever writes into the configured backup folder. A failed
+ * scheduled backup is logged and retried on the next tick; it never blocks the clinic's work.
+ */
+function scheduleAutomaticBackups(): void {
+  const runIfDue = async (): Promise<void> => {
+    if (!host || !database || recoveryReason !== null || maintenanceMode) return
+    try {
+      const ctx = createServiceContext({
+        db: database.db,
+        host,
+        actor: { ...SYSTEM_ACTOR, permissions: new Set(['backups.create']) },
+        sessionId: 'scheduler'
+      })
+      const result = await runScheduledBackup(ctx, {})
+      if (result.ran) host.logger.info('Scheduled backup created', { filePath: result.filePath })
+    } catch (error) {
+      host?.logger.warn('Scheduled backup failed', { reason: describeErrorForLog(error) })
+    }
+  }
+  setTimeout(() => void runIfDue(), 5000)
+  const timer = setInterval(() => void runIfDue(), 60 * 60 * 1000)
+  timer.unref()
 }
 
 export const processState = {
