@@ -32,6 +32,7 @@ export const MIGRATIONS: Migration[] = [
       addColumnIfMissing(db, 'print_history', 'profile_id', 'INTEGER')
       addColumnIfMissing(db, 'print_history', 'action', "TEXT NOT NULL DEFAULT 'print'")
       addColumnIfMissing(db, 'print_history', 'payload_path', 'TEXT')
+      addColumnIfMissing(db, 'print_history', 'file_path', 'TEXT')
       db.exec(SCHEMA_V2_SQL)
     }
   }

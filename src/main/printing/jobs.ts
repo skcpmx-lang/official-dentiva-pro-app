@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync, readdirSync }
 import { join } from 'node:path'
 import type { ServiceContext } from '../context'
 import { assertPermission } from '../context'
-import { AppError, notFoundError, validationError } from '@shared/errors'
+import { notFoundError, validationError } from '@shared/errors'
 import { exportStamp, requireExtension } from '../files/csv'
 import { marginMicrons, paperMicrons } from '../platform/types'
 import { prepareDocument, resolvePaper, type PreparedDocument, type PrintRequest } from './documents'
@@ -92,9 +92,9 @@ function recordHistory(
   const result = ctx.db
     .prepare(
       `INSERT INTO print_history (document_type, record_id, record_no, patient_id, user_id, username, printer_name,
-         paper_class, copies, result, error, printed_at, title, profile_id, action, payload_path)
+         paper_class, copies, result, error, printed_at, title, profile_id, action, payload_path, file_path)
        VALUES (@documentType, @entityId, @reference, @patientId, @userId, @username, @printerName, @paperClass,
-         @copies, @result, @failureReason, @at, @title, @profileId, @action, @payloadPath)`
+         @copies, @result, @failureReason, @at, @title, @profileId, @action, @payloadPath, @filePath)`
     )
     .run({
       documentType: entry.documentType,
@@ -112,7 +112,8 @@ function recordHistory(
       title: entry.title,
       profileId: entry.profileId,
       action: entry.action,
-      payloadPath: entry.payloadPath
+      payloadPath: entry.payloadPath,
+      filePath: entry.filePath
     })
   return Number(result.lastInsertRowid)
 }
@@ -454,7 +455,12 @@ export function loadPrintPayload(ctx: ServiceContext, id: number): { html: strin
     | undefined
   if (!row) throw notFoundError('print job', id)
   if (!row.payload_path) throw validationError('This job has no stored document (successful jobs are re-rendered from the record instead).')
-  const html = readFileSync(row.payload_path, 'utf8')
+  let html: string
+  try {
+    html = readFileSync(row.payload_path, 'utf8')
+  } catch {
+    throw validationError('The stored document is no longer on disk. Print the record again from its screen.')
+  }
   const fileName = row.payload_path.split(/[\\/]/).pop() ?? 'document.html'
   return { html, title: row.title ?? 'Print job', fileName }
 }
@@ -499,8 +505,9 @@ export async function retryPrint(ctx: ServiceContext, historyId: number, printer
     payloadPath: result.success ? null : row.payload_path
   })
   if (result.success) {
-    /* The retried document is gone from the queue, so its stored copy can go too. */
+    /* The retried document reached the printer, so its kept copy is no longer needed. */
     rmSync(row.payload_path, { force: true })
+    ctx.db.prepare('UPDATE print_history SET payload_path = NULL WHERE id = ?').run(historyId)
   }
   return {
     ok: result.success,
@@ -508,11 +515,5 @@ export async function retryPrint(ctx: ServiceContext, historyId: number, printer
     printerName: target,
     historyId: newHistoryId,
     filePath: null
-  }
-}
-
-export function assertPrintingReady(ctx: ServiceContext): void {
-  if (!ctx.host.machine.printersAvailable) {
-    throw new AppError('E_STATE', 'This machine reports no printing subsystem. Save the document as PDF instead.')
   }
 }

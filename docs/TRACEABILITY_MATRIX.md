@@ -46,7 +46,7 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | REQ-027 | §29,§30 | Data-driven dental chart (FDI adult + primary), configurable conditions | Clinical | `src/shared/dental.ts`, `src/main/modules/clinical/chart.ts`, `features/clinical/{DentalChartScreen,ToothGrid}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
 | REQ-028 | §31 | Visit module (all clinical fields, billing-independent) | Clinical | `src/main/modules/clinical/visits.ts`, `features/clinical/{VisitListScreen,VisitScreen}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
 | REQ-029 | §32 | Treatment catalog with editable prices | Clinical | `src/main/modules/clinical/treatments.ts`, `features/clinical/TreatmentCatalogScreen.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
-| REQ-030 | §33..§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/clinical/prescriptions.ts`, `features/clinical/{PrescriptionListScreen,PrescriptionScreen}.tsx`; print template pending | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ⏳ |
+| REQ-030 | §33..§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/clinical/prescriptions.ts`, `features/clinical/{PrescriptionListScreen,PrescriptionScreen}.tsx`; Rx sheet rendered by `printing/documents.ts` (C / C-O / E-R / E, dentist header with designations and BMDC number, medicine table, advice) | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx`, `tests/integration/printing.test.ts` | ✅ |
 | REQ-031 | §66,§67 | Appointments (statuses, views) and queue management | Scheduling | `src/main/modules/scheduling/{appointments,queue}.ts`, `features/scheduling/**` | `tests/integration/scheduling.test.ts`, `tests/renderer/scheduling-ui.test.tsx` | ✅ |
 | REQ-032 | §68 | Referrals with follow-up tracking | Clinical | `src/main/modules/patients/service.ts`, `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
 | REQ-033 | §69 | Attachments (upload, preview, open, export, archive) | Files | `src/main/files/attachments.ts`, patient profile attachments tab | `tests/integration/patients.test.ts` | ⏳ |
@@ -55,7 +55,7 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 
 | Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
 |---|---|---|---|---|---|---|
-| REQ-040 | §43,§44 | Invoices (lines, discount, statuses, paper-aware printing) | Billing | `src/main/modules/billing/invoices.ts`, `features/billing/{InvoiceListScreen,InvoiceScreen}.tsx`; paper-aware printing pending | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ⏳ |
+| REQ-040 | §43,§44 | Invoices (lines, discount, statuses, paper-aware printing) | Billing | `src/main/modules/billing/invoices.ts`, `features/billing/{InvoiceListScreen,InvoiceScreen}.tsx`; paper-aware invoice and receipt layouts in `printing/documents.ts`, print action from the invoice screen | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx`, `tests/integration/printing.test.ts` | ✅ |
 | REQ-041 | §45 | Payments with methods, allocation, references | Billing | `src/main/modules/billing/payments.ts` (9 record categories, references, overpayment and refund guards) | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ✅ |
 | REQ-042 | §46,§75 | Payment reporting & filters with RBAC | Billing | `billing/payments.ts` (`listPayments`, `dailyCollections`), `invoices.list` aggregate totals, plus the `collections_method` report and `payments.export` (both behind `payments.view` / `payments.export`) | `tests/integration/billing.test.ts`, `tests/integration/accounting.test.ts` | ✅ |
 | REQ-043 | §94 | Void/reversal instead of destructive financial edits | Billing | `invoices.ts` (`voidInvoice` blocked while payments exist, delete limited to unpaid/void), `payments.ts` (void keeps the receipt marked void + writes a linked reversal and recomputes), `accounting/entries.ts` `voidEntry` (keeps the row marked void with a reason and drops it from totals) | `tests/integration/billing.test.ts`, `tests/integration/accounting.test.ts` | ✅ |
@@ -69,10 +69,10 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 
 | Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
 |---|---|---|---|---|---|---|
-| REQ-050 | §39,§40,§41 | Printing engine: enumeration, paper classes, preview, reflow | Printing | `src/main/printing/**` | `tests/unit/print-templates.test.ts` | ⏳ |
-| REQ-051 | §42 | Offline PDF with Unicode/Bengali fidelity | Printing | `printing/pdf.ts` | Windows E2E print test | ⏳ |
-| REQ-052 | §95 | Printer profiles CRUD + test print | Printing | `printing/profiles.ts`, `features/settings/PrintingSettings.tsx` | `tests/integration/printProfiles.test.ts` | ⏳ |
-| REQ-053 | §128,§129 | Print history and printer-failure recovery | Printing | `printing/history.ts` | `tests/integration/printHistory.test.ts` | ⏳ |
+| REQ-050 | §39,§40,§41 | Printing engine: enumeration, paper classes, preview, reflow | Printing | `src/main/printing/{fonts,templates,documents,jobs,profiles}.ts` (A4/A5/thermal 58|80/mini/custom, paper-aware layouts built from `paperMicrons`, preview HTML shown unmodified in `features/printing/PrintDialog.tsx`), `platform/electronPrint.ts` (hidden sandboxed window) | `tests/integration/printing.test.ts`, `tests/renderer/printing-ui.test.tsx`; printer E2E on Windows in checkpoint 20 | ✅ |
+| REQ-051 | §42 | Offline PDF with Unicode/Bengali fidelity | Printing | `printing/jobs.ts` (`savePdf` → `host.printing.renderPdf`, Chromium `printToPDF`, no network) with the bundled Inter + Noto Sans Bengali faces embedded as data URIs | `tests/integration/printing.test.ts` (PDF orchestration + Bengali payload); pixel-level Windows verification in checkpoint 20 | ✅ |
+| REQ-052 | §95 | Printer profiles CRUD + test print | Printing | `printing/profiles.ts` (one default per document type, archive-with-reason audit), `features/settings/PrintingScreen.tsx` (printer enumeration, bundled-font status, test page) | `tests/integration/printing.test.ts`, `tests/renderer/printing-settings.test.tsx` | ✅ |
+| REQ-053 | §128,§129 | Print history and printer-failure recovery | Printing | `printing/jobs.ts` (every attempt recorded; a refused job keeps its rendered HTML under `dataDir/print-jobs`, retention 40, and can be retried after the printer is fixed), `features/printing/PrintHistoryScreen.tsx` | `tests/integration/printing.test.ts`, `tests/renderer/printing-settings.test.tsx` | ✅ |
 | REQ-054 | §64,§117 | Global search across all modules with permissions | Search | `src/main/search/**`, `features/search/CommandPalette.tsx` | E2E + `tests/integration/search.test.ts` | ⏳ |
 | REQ-055 | §65,§118 | Actionable, deduplicated notification centre | Notifications | `src/main/modules/notifications/**` | `tests/integration/notifications.test.ts` | ⏳ |
 | REQ-056 | §59,§60,§61,§62,§63,§130,§131 | Backup/restore: packages, validation, pre-restore backup, rollback, scheduling, multi-file | Backup | `src/main/backup/**` | E2E-09, `tests/integration/backup.test.ts` | ⏳ |
@@ -107,7 +107,7 @@ Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`
 | ADD-08 | Permission-aware CSV/PDF export per module | Data | ⏳ |
 | ADD-09 | Documented data directory & uninstall behaviour | Release | ⏳ |
 | ADD-10 | Recovery mode on DB failure | Platform | ⏳ |
-| ADD-11 | Printable patient clinical summary | Printing | ⏳ |
+| ADD-11 | Printable patient clinical summary | Printing | ✅ (`patient_summary` layout in `printing/documents.ts`, print action on the patient profile) |
 | ADD-12 | Password change/policy + forced change | Auth | ⏳ |
 | ADD-13 | Idle auto-lock with lock screen | Session | ⏳ |
 | ADD-14 | Dashboard personalisation (per user) | Dashboard | ⏳ |
