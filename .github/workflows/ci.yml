@@ -1,0 +1,94 @@
+name: CI
+
+# The everyday gate: types, lint, the three test layers, the repository audits and a production bundle.
+# Nothing here touches Windows-only behaviour — that is ci-windows.yml — but a change that breaks the
+# application bundle, the audits or any test fails here first.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, lint, tests and audits
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      # The registry occasionally needs more patience than npm's defaults give it on a shared runner;
+      # a timed-out fetch used to fail the whole job with nothing readable in the annotation.
+      NPM_CONFIG_FETCH_RETRIES: '5'
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '20000'
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
+      NPM_CONFIG_FETCH_TIMEOUT: '600000'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if ! npm ci --no-audit --no-fund 2>&1 | tee npm-ci.log; then
+            summary=$(grep -E "npm error|npm ERR" npm-ci.log | head -5 | tr -d '%' | tr '\n\r' '  ')
+            echo "::error title=npm ci failed::${summary:-npm ci failed; see the step log}"
+            exit 1
+          fi
+
+      - name: Typecheck (main + renderer)
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit, integration and renderer tests
+        run: npm test
+
+      - name: Coverage
+        run: npm run test:coverage
+        continue-on-error: false
+
+      - name: Audit — no placeholder functionality
+        run: npm run audit:placeholders
+
+      - name: Audit — no network access at run time
+        run: npm run audit:offline
+
+      - name: Audit — dependency licences and notices
+        run: npm run audit:deps:check
+
+      - name: Audit — no unreachable exports
+        run: npm run audit:deadcode
+
+      - name: Audit — security checklist
+        run: npm run audit:security
+
+      - name: Application icon set is current
+        run: npm run icons:check
+
+      - name: Production bundle
+        run: npm run build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@renderer/*": ["src/renderer/src/*"],
+      "@main/*": ["src/main/*"]
+    }
+  },
+  "include": [
+    "src/renderer/src/**/*",
+    "src/shared/**/*",
+    "src/preload/index.d.ts",
+    "tests/renderer/**/*",
+    "tests/e2e/**/*",
+    // The renderer flow tests drive the real main process, so they import these two harnesses.
+    // The mapping above exists for them alone: renderer *source* may never import `@main/*`, which
+    // ESLint enforces (`no-restricted-imports`).
+    "tests/integration/helpers.ts",
+    "tests/integration/routerHarness.ts"
+  ]
+}

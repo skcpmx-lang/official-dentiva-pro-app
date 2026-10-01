@@ -1,0 +1,104 @@
+name: CI — Windows
+
+# Windows is the only supported platform, so everything that depends on it is proven here: the native
+# module compiled against Electron, the end-to-end workflows against a real built application, printing
+# and PDF generation, and the installer itself.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows build, end-to-end and installer
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    env:
+      # The activation code the end-to-end workflow types. It is not the product's code: the verifier
+      # accepts DENTIVA_ACTIVATION_CODE only while host.isDevelopment() is true, which is
+      # `!app.isPackaged`, so a packaged installer ignores this variable entirely.
+      DENTIVA_ACTIVATION_CODE: '0000-0000-0000-0001'
+      ELECTRON_ENABLE_LOGGING: '1'
+      # Each workflow creates its own scratch data directory, so no run can see another run's database.
+      # The registry occasionally needs more patience than npm's defaults give it on a shared runner;
+      # a timed-out fetch used to fail the whole job with nothing readable in the annotation.
+      NPM_CONFIG_FETCH_RETRIES: '5'
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '20000'
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '120000'
+      NPM_CONFIG_FETCH_TIMEOUT: '600000'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if ! npm ci --no-audit --no-fund 2>&1 | tee npm-ci.log; then
+            summary=$(grep -E "npm error|npm ERR" npm-ci.log | head -5 | tr -d '%' | tr '\n\r' '  ')
+            echo "::error title=npm ci failed::${summary:-npm ci failed; see the step log}"
+            exit 1
+          fi
+
+      - name: Typecheck and lint
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Tests against the Node runtime
+        run: npm test
+
+      - name: Build the application bundle
+        run: npm run build
+
+      - name: Build the build identity file
+        run: npm run build:info
+
+      - name: Rebuild the native module for Electron
+        run: npm run rebuild:electron
+
+      - name: End-to-end workflows (Playwright, packaged application)
+        run: npm run test:e2e
+
+      - name: Upload end-to-end report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-e2e-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Build the NSIS installer
+        run: npm run dist:win
+
+      - name: Checksums for the installer
+        run: npm run release:checksums
+
+      - name: Upload the installer and its checksum
+        uses: actions/upload-artifact@v7
+        with:
+          name: dentiva-pro-windows-installer
+          path: |
+            release/*.exe
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

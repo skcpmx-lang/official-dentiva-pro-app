@@ -1,0 +1,3 @@
+# Declarations that exist in the codebase and are to be removed before release.
+# The audit fails on anything new; this list only shrinks. Each name was checked to be
+# referenced nowhere in the repository.

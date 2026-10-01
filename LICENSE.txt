@@ -1,0 +1,67 @@
+DENTIVA PRO — END USER LICENCE (PROPRIETARY)
+
+Version 1.0.0 Final
+Copyright © 2026 Shohan Khan. All rights reserved.
+Contact: helloiamshohan@gmail.com
+
+1. LICENCE
+   Dentiva Pro ("the Software") is licensed, not sold. Subject to payment of the applicable licence fee
+   and to this agreement, the copyright holder grants the licensee a non-exclusive, non-transferable,
+   perpetual licence to install and use one copy of the Software on the computers of the clinic that
+   purchased it, for that clinic's own practice management, in the country in which the licence was
+   purchased.
+
+2. ACTIVATION
+   The Software is activated once, offline, with the activation code supplied by the copyright holder.
+   The code is verified inside the application; no internet connection, account or subscription is
+   required at any time. The licensee must keep the activation code confidential, must not publish it,
+   and must not attempt to bypass, disable or reverse-engineer the activation or any other protection.
+
+3. RESTRICTIONS
+   The licensee must not: (a) copy, distribute, sublicense, rent, lease or sell the Software or the
+   activation code; (b) modify, translate, adapt or create derivative works of the Software;
+   (c) reverse-engineer, decompile or disassemble the Software, except to the extent that applicable law
+   expressly permits it despite this restriction; (d) remove or alter any copyright, licence or
+   attribution notice; (e) use the Software to process data of clinics other than the licensee's own,
+   except within the same legal entity.
+
+4. CLINIC DATA
+   All records the licensee creates — patients, clinical notes, prescriptions, invoices, inventory,
+   accounting, attachments, backups — are stored on the licensee's own computer and are the licensee's
+   property. The copyright holder has no access to them and receives no data from the Software.
+   The licensee is responsible for backups and for compliance with the laws and professional rules that
+   apply to medical records in the licensee's jurisdiction, including retention periods and consent.
+
+5. SUPPORT AND UPDATES
+   Support is provided through the contact address above. Updates are supplied as complete installers;
+   installing an update over an existing installation keeps the clinic data, which is migrated forward
+   automatically. Support terms and any update entitlement are set out in the invoice or service
+   agreement under which the Software was purchased.
+
+6. THIRD-PARTY COMPONENTS
+   The Software includes open-source components that are licensed under their own terms. Those terms are
+   reproduced in THIRD_PARTY_NOTICES.md, which is installed with the Software and is also reachable from
+   About → Third-party notices. Where a third-party licence conflicts with this agreement, the
+   third-party licence prevails for that component only.
+
+7. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+   WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. THE LICENSEE
+   USES THE SOFTWARE AT THEIR OWN RISK. THE COPYRIGHT HOLDER DOES NOT WARRANT THAT THE SOFTWARE WILL BE
+   ERROR-FREE OR THAT EVERY DEFECT WILL BE CORRECTED.
+
+8. LIMITATION OF LIABILITY
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY INDIRECT,
+   INCIDENTAL, SPECIAL OR CONSEQUENTIAL DAMAGES, OR FOR LOSS OF DATA, PROFITS OR BUSINESS, ARISING FROM
+   THE USE OF OR INABILITY TO USE THE SOFTWARE. NOTHING IN THIS AGREEMENT LIMITS LIABILITY THAT CANNOT
+   BE LIMITED BY APPLICABLE LAW.
+
+9. TERMINATION
+   This licence terminates automatically if the licensee breaches any restriction in clause 3. On
+   termination the licensee must stop using the Software and remove it from their computers. Clinic data
+   remains the licensee's and may be exported or backed up before removal.
+
+10. GOVERNING LAW
+    This agreement is governed by the laws of the People's Republic of Bangladesh, and the courts of
+    Dhaka have exclusive jurisdiction, without prejudice to any mandatory consumer protection provisions
+    of the licensee's place of residence.

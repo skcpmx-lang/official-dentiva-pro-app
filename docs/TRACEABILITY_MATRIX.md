@@ -1,0 +1,127 @@
+# Dentiva Pro — Requirement Traceability Matrix
+
+Status legend: ✅ implemented & tested · ⏳ in progress · ❌ not satisfied.
+"Spec §" refers to the master production build specification sections.
+Source paths are relative to the repository root; test paths are relative to `tests/`.
+On a ✅ row the Test column names evidence that exists and passes today; on a ⏳ row it names the
+evidence still to be produced (the file may not exist yet) — the row stays ⏳ until it does.
+Status column is finalised during the release audit (`docs/COMPLETION_STATUS.md`).
+
+## A. Foundation
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-001 | §8,§9 | Desktop shell technology selection & rationale | Architecture | `docs/ARCHITECTURE.md`, `electron.vite.config.ts`, electron 44 | build in CI | ⏳ |
+| REQ-002 | §6,§7,§89 | 100 % offline; no paid/external service | All | no HTTP client in `src/**`; CSP + request blocking in `src/main/index.ts`; `scripts/audit-offline.mjs` walks every source file for external endpoints and is a CI step (`npm run audit:offline`) | `npm run audit:offline` (CI) — a runtime test would only re-check the same tree | ✅ |
+| REQ-003 | §10,§11 | SQLite schema, FKs, indexes, migrations, integrity | DB | `src/main/db/{schema,migrate,connection,seed,counters}.ts` (52 tables, WAL, foreign keys on) | `tests/integration/database.test.ts` (migrations, orphan refusal, append-only audit log), `tests/integration/database-relationships.test.ts` (relationships after real workflows, primary keys, soft-delete set, uniqueness and domain rules) | ✅ |
+| REQ-004 | §125 | Exact money arithmetic (BDT) | Shared | `src/shared/money.ts` | `tests/unit/money.test.ts` | ⏳ |
+| REQ-005 | §126,§127 | Date/time handling, ranges, age derivation | Shared | `src/shared/datetime.ts` | `tests/unit/datetime.test.ts` | ⏳ |
+| REQ-006 | §5,§19 | Bengali Unicode end-to-end (NFC, search fold, bundled font) | Shared/UI/Print | `src/shared/bengali.ts`, `@fontsource/noto-sans-bengali` | `tests/unit/bengali.test.ts`, E2E-03 | ⏳ |
+| REQ-007 | §12,§13..§134 | Full entity model per specification | DB | `src/main/db/schema.ts` (52 tables + `patient_financials`/`inventory_current` views) | `tests/integration/database.test.ts`, `tests/integration/database-relationships.test.ts` | ✅ |
+| REQ-008 | §150,§151 | Project memory + checkpoints | Docs | `ARENA.md`, `docs/COMPLETION_STATUS.md` | review | ⏳ |
+
+## B. Security & access
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-010 | §14,§120 | Offline activation (no plaintext code, derived verifier, tamper check) | Activation | `src/main/activation/verifier.ts` (8 permuted, XOR-masked fragments; scrypt with a fixed salt; timing-safe compare; `license_state` fingerprint), `service.ts` (attempt throttling, one-time state, development-only seam) | `tests/integration/activation-plaintext.test.ts` (every code-shaped string in the repository through the real verifier), `tests/renderer/activation.test.tsx` (screen states, refusal, throttling), `scripts/audit-security.mjs` (split/masked verifier, no contiguous hex) | ✅ code and tests; the packaged-installer half is workflow 01 on the Windows runner |
+| REQ-011 | §13 | First-run setup wizard (5 steps, multi-designation dentists, admin creation) | Setup | `src/main/modules/setup/service.ts`, `src/renderer/src/features/setup/**` | E2E-01 | ⏳ |
+| REQ-012 | §58 | Secure login/logout, scrypt hashing, failure throttling | Auth | `src/main/auth/password.ts`, `session/sessionManager.ts` | `tests/integration/auth.test.ts` | ⏳ |
+| REQ-013 | §57 | Auto-lock (5/10/15/30/off) with IPC lockdown | Session | `src/main/session/sessionManager.ts` | `tests/integration/lock.test.ts` | ⏳ |
+| REQ-014 | §54,§55 | Granular RBAC enforced in business logic | Auth/All | `src/shared/permissions.ts` (68 codes, 7 roles), `assertPermission`/`assertAnyPermission` in every service entry point; `scripts/audit-security.mjs` walks all 196 channels to a reachable assertion (documented exceptions only) | `tests/integration/patients.test.ts` (business-layer denial), `tests/integration/ipc-authorisation.test.ts` (register, branding, batches), `tests/renderer/rbac-ui.test.tsx`, `scripts/audit-security.mjs` (CI) | ✅ |
+| REQ-015 | §56 | Append-only audit trail | Audit | `src/main/modules/audit/service.ts` + DB triggers | `tests/integration/database.test.ts` (append-only at database level) | ✅ |
+| REQ-016 | §71,§132,§133,§134 | Destructive-action safeguards & typed confirmations | Admin/Settings | `src/main/modules/settings/service.ts` | `tests/integration/destructive.test.ts` | ⏳ |
+| REQ-017 | §84,§86 | Rotating logs without secrets/PII | Logging | `src/main/logging/logger.ts` | `tests/unit/logger.test.ts` | ⏳ |
+| REQ-018 | §70 | Attachment security (allowlist, safe names, traversal block) | Files | `src/main/files/attachmentService.ts` | `tests/integration/attachments.test.ts` | ⏳ |
+
+## C. Core practice
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-020 | §15,§16,§142 | App shell: header, sidebar, sections, collapse | Shell | `src/renderer/src/components/shell/**` | `tests/renderer/rbac-ui.test.tsx` | ✅ |
+| REQ-021 | §17,§18,§19 | Design tokens, typography, premium visual system | Design | `src/renderer/src/design/**` | visual audit (checkpoint 19) | ✅ |
+| REQ-022 | §20,§21,§110 | Responsive 1280→2560, states for every component | UI | all screens | `docs/COMPLETION_STATUS.md` visual audit | ⏳ |
+| REQ-023 | §22,§75 | Permission-aware dashboard widgets | Dashboard | `src/main/modules/dashboard/service.ts`, `features/dashboard/**` | `tests/integration/dashboard.test.ts` | ⏳ |
+| REQ-024 | §23,§24 | Patient CRUD, date-range presets, unique patient code | Patients | `src/main/modules/patients/service.ts`, `features/patients/PatientListScreen.tsx`, `PatientFormScreen.tsx` | `tests/integration/patients.test.ts`, E2E-02 | ✅ |
+| REQ-025 | §25,§26 | Rich patient profile with tabs + working quick actions | Patients | `features/patients/PatientProfileScreen.tsx` | E2E-02/03 | ⏳ |
+| REQ-026 | §27,§28 | Unlimited history + clinical timeline with filters | Patients | `src/main/modules/patients/service.ts` (`timeline`), `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
+| REQ-027 | §29,§30 | Data-driven dental chart (FDI adult + primary), configurable conditions | Clinical | `src/shared/dental.ts`, `src/main/modules/clinical/chart.ts`, `features/clinical/{DentalChartScreen,ToothGrid}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-028 | §31 | Visit module (all clinical fields, billing-independent) | Clinical | `src/main/modules/clinical/visits.ts`, `features/clinical/{VisitListScreen,VisitScreen}.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-029 | §32 | Treatment catalog with editable prices | Clinical | `src/main/modules/clinical/treatments.ts`, `features/clinical/TreatmentCatalogScreen.tsx` | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx` | ✅ |
+| REQ-030 | §33..§38 | Prescriptions: unlimited medicines, C/C-O/E-R/E, dentist header, layout | Prescriptions | `src/main/modules/clinical/prescriptions.ts`, `features/clinical/{PrescriptionListScreen,PrescriptionScreen}.tsx`; Rx sheet rendered by `printing/documents.ts` (C / C-O / E-R / E, dentist header with designations and BMDC number, medicine table, advice) | `tests/integration/clinical.test.ts`, `tests/renderer/clinical-ui.test.tsx`, `tests/integration/printing.test.ts` | ✅ |
+| REQ-031 | §66,§67 | Appointments (statuses, views) and queue management | Scheduling | `src/main/modules/scheduling/{appointments,queue}.ts`, `features/scheduling/**` | `tests/integration/scheduling.test.ts`, `tests/renderer/scheduling-ui.test.tsx` | ✅ |
+| REQ-032 | §68 | Referrals with follow-up tracking | Clinical | `src/main/modules/patients/service.ts`, `features/patients/PatientProfileScreen.tsx` | `tests/integration/patients.test.ts` | ✅ |
+| REQ-033 | §69 | Attachments (upload, preview, open, export, archive) | Files | `src/main/files/attachments.ts`, patient profile attachments tab | `tests/integration/patients.test.ts` | ⏳ |
+
+## D. Billing, inventory, accounting
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-040 | §43,§44 | Invoices (lines, discount, statuses, paper-aware printing) | Billing | `src/main/modules/billing/invoices.ts`, `features/billing/{InvoiceListScreen,InvoiceScreen}.tsx`; paper-aware invoice and receipt layouts in `printing/documents.ts`, print action from the invoice screen | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx`, `tests/integration/printing.test.ts` | ✅ |
+| REQ-041 | §45 | Payments with methods, allocation, references | Billing | `src/main/modules/billing/payments.ts` (9 record categories, references, overpayment and refund guards) | `tests/integration/billing.test.ts`, `tests/renderer/billing-ui.test.tsx` | ✅ |
+| REQ-042 | §46,§75 | Payment reporting & filters with RBAC | Billing | `billing/payments.ts` (`listPayments`, `dailyCollections`), `invoices.list` aggregate totals, plus the `collections_method` report and `payments.export` (both behind `payments.view` / `payments.export`) | `tests/integration/billing.test.ts`, `tests/integration/accounting.test.ts` | ✅ |
+| REQ-043 | §94 | Void/reversal instead of destructive financial edits | Billing | `invoices.ts` (`voidInvoice` blocked while payments exist, delete limited to unpaid/void), `payments.ts` (void keeps the receipt marked void + writes a linked reversal and recomputes), `accounting/entries.ts` `voidEntry` (keeps the row marked void with a reason and drops it from totals) | `tests/integration/billing.test.ts`, `tests/integration/accounting.test.ts` | ✅ |
+| REQ-044 | §47,§48 | Inventory items, batches, ledger movements, alerts | Inventory | `src/main/modules/inventory/{items,movements,purchases,suppliers}.ts` + `ipc/handlers/inventory.ts` (24 channels) + `features/inventory/**`: append-only ledger, batch/expiry tracking with FEFO issue, low-stock and expiry worklists, movement reversal | `tests/integration/inventory.test.ts`, `tests/renderer/inventory-ui.test.tsx` | ✅ |
+| REQ-045 | §49 | Suppliers with purchase history | Inventory | `inventory/suppliers.ts` + `inventory/purchases.ts`: supplier roll-ups (purchase count, spend, owed) read from the purchases, receipts that write batches and movements in one transaction, part-payment tracking, CSV export | `tests/integration/inventory.test.ts`, `tests/renderer/inventory-ui.test.tsx` | ✅ |
+| REQ-046 | §50,§51 | Accounting income/expense + reports + exports | Accounting | `src/main/modules/accounting/{entries,reports}.ts` + `ipc/handlers/accounting.ts` (16 channels) + `features/accounting/AccountingScreen.tsx`, `features/reports/ReportsScreen.tsx`: categorised income/expense ledger with reversals, daily close recorded against the counted drawer (expected cash from cash receipts and cash expenses, variance kept, reopen-with-reason), 10 report keys returning raw typed rows with CSV export of the same columns | `tests/integration/accounting.test.ts`, `tests/renderer/accounting-ui.test.tsx` | ✅ |
+| REQ-047 | §52,§53 | Staff records & user accounts | Admin | `src/main/modules/staff/service.ts` (employment register with Bangla names, photo, archive guard while a login is linked) + `users/service.ts` (scrypt hashes, clinic password policy, reset/unlock, last-active-owner and self guards, typed-username deletion) + `features/settings/{StaffScreen,UsersScreen}.tsx` | `tests/integration/staff.test.ts`, `tests/integration/users.test.ts`, `tests/renderer/staff-ui.test.tsx` | ✅ |
+| REQ-048 | §54 | Roles & permission matrix incl. custom roles | Admin | `src/main/modules/roles/service.ts` (67-code catalog, custom roles, built-in identifiers frozen, in-use roles protected) + `features/settings/RolesScreen.tsx` permission matrix | `tests/integration/roles.test.ts` | ✅ |
+
+## E. Printing, search, notifications, backup
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-050 | §39,§40,§41 | Printing engine: enumeration, paper classes, preview, reflow | Printing | `src/main/printing/{fonts,templates,documents,jobs,profiles}.ts` (A4/A5/thermal 58|80/mini/custom, paper-aware layouts built from `paperMicrons`, preview HTML shown unmodified in `features/printing/PrintDialog.tsx`), `platform/electronPrint.ts` (hidden sandboxed window) | `tests/integration/printing.test.ts`, `tests/renderer/printing-ui.test.tsx`; printer E2E on Windows in checkpoint 20 | ✅ |
+| REQ-051 | §42 | Offline PDF with Unicode/Bengali fidelity | Printing | `printing/jobs.ts` (`savePdf` → `host.printing.renderPdf`, Chromium `printToPDF`, no network) with the bundled Inter + Noto Sans Bengali faces embedded as data URIs | `tests/integration/printing.test.ts` (PDF orchestration + Bengali payload); pixel-level Windows verification in checkpoint 20 | ✅ |
+| REQ-052 | §95 | Printer profiles CRUD + test print | Printing | `printing/profiles.ts` (one default per document type, archive-with-reason audit), `features/settings/PrintingScreen.tsx` (printer enumeration, bundled-font status, test page) | `tests/integration/printing.test.ts`, `tests/renderer/printing-settings.test.tsx` | ✅ |
+| REQ-053 | §128,§129 | Print history and printer-failure recovery | Printing | `printing/jobs.ts` (every attempt recorded; a refused job keeps its rendered HTML under `dataDir/print-jobs`, retention 40, and can be retried after the printer is fixed), `features/printing/PrintHistoryScreen.tsx` | `tests/integration/printing.test.ts`, `tests/renderer/printing-settings.test.tsx` | ✅ |
+| REQ-054 | §64,§117 | Global search across all modules with permissions | Search | `src/main/search/service.ts` (`search.global` fanning out to eleven module queries — patients, appointments, invoices, payments, prescriptions, visits, treatments, inventory, suppliers, staff, accounting — each skipped when the operator lacks its view permission and failing on its own without taking the whole search down; Bengali `*_fold` columns and `name_bn` fields are searched, not only the English ones), `components/shell/CommandPalette.tsx` (actions for an empty box drawn from the real permission set, grouped results once something is typed, keyboard navigation over the actionable rows only), deep links through `?date=` / `?search=` | `tests/integration/search.test.ts` (permission-scoped groups, Bengali terms, cross-module hits), `tests/renderer/search-ui.test.tsx` (grouped results, keyboard open, no unpermitted command, honest empty state); Windows E2E in checkpoint 20 | ✅ |
+| REQ-055 | §65,§118 | Actionable, deduplicated notification centre | Notifications | `src/main/modules/notifications/service.ts` (six derived alert types: low/expiring/expired stock, overdue invoices, missed appointments, backup due; `raiseNotification` deduplicates on a stable `dedupe_key` and keeps read/dismissed state across rebuilds; `syncNotifications` retires alerts whose condition cleared; every row carries the permission it needs, so an alert is only visible to an operator allowed to act on it), `ipc/handlers/notifications.ts` (6 channels, broadcasts `notifications:changed {unread}` to every window), `components/shell/NotificationBell.tsx` (unread badge, minute poll plus push refresh, popover that marks as read and opens the record), `features/notifications/NotificationsScreen.tsx` (live/unread/needs-attention/dismissed views, open/read/dismiss/restore, mark all read) | `tests/integration/notifications.test.ts` (dedupe and state preservation, retirement, permission scoping, overdue/missed windows, backup due), `tests/renderer/notifications-ui.test.tsx`, `tests/renderer/search-ui.test.tsx`; dashboard counters covered in `tests/integration/database.test.ts` | ✅ |
+| REQ-056 | §59,§60,§61,§62,§63,§130,§131 | Backup/restore: packages, validation, pre-restore backup, rollback, scheduling, multi-file | Backup | `src/main/backup/{package,service}.ts` (zip + manifest + SHA-256; quick/full/auto/pre-restore/pre-migration; restore = validate → safety copy → replace → reopen → verify → rollback), `ipc/handlers/backup.ts` (13 channels), `features/settings/BackupScreen.tsx`, `db/connection.ts` pre-migration snapshots | E2E-09, `tests/integration/backup.test.ts` (round-trip, truncated package, rollback, bare `.db`, retention, permissions, scan/adopt), `tests/renderer/backup-ui.test.tsx` | ✅ |
+| REQ-057 | §73,§74 | Data export per module; robust CSV import with preview | Data | `src/main/modules/data/**` | `tests/integration/importExport.test.ts` | ⏳ |
+| REQ-058 | §79 | Generated application icon set (16→256 px, .ico, taskbar, installer) | Branding | `scripts/generate-icons.mjs` renders the vector mark with sharp to `build/icons/icon-{16,24,32,48,64,128,256}.png` and assembles `build/icon.ico` (7 PNG frames, valid ICONDIR/ICONDIRENTRY table); `electron-builder.yml` uses `build/icon.ico` for the executable, the taskbar and the installer; the script is deterministic — `--check` reproduces the committed files byte-for-byte | `npm run icons:check` in `ci.yml`, visual review of `build/icons/icon-256.png` | ✅ |
+| REQ-059 | §87,§88 | About screen + third-party notices | Admin | `features/admin/AboutScreen.tsx`, `THIRD_PARTY_NOTICES.md` | review | ⏳ |
+
+## F. Engineering quality & release
+
+| Req ID | Spec § | Requirement | Module | Implementation | Test | Status |
+|---|---|---|---|---|---|---|
+| REQ-060 | §76,§77,§78 | Shortcuts, accessibility, single icon family | UI | `src/renderer/src/lib/shortcuts.ts`, shell components | `tests/renderer/shortcuts.test.tsx` | ⏳ |
+| REQ-061 | §80,§81,§82,§83 | Animation restraint, performance, crash safety, error handling | Platform | `src/main/index.ts`, `lib/api.ts`, `components/states/**` | `tests/renderer/error-states.test.tsx` | ⏳ |
+| REQ-062 | §90,§91 | No placeholder code, no dead code | Quality | `scripts/audit-placeholders.mjs` (TODO/FIXME/HACK markers, "coming soon"/"not implemented" wording, empty handlers, `href="#"`; SQL `placeholders` and input `placeholder` attributes are deliberately not matches) and `scripts/audit-deadcode.mjs` (every exported name must be referenced somewhere in the repository; a tracked-debt baseline that only shrinks, now empty — 164 pre-existing dead declarations were removed in this checkpoint, and the removal is proven by `tsc` + the whole suite) | CI steps `audit:placeholders` and `audit:deadcode` (both clean locally) | ✅ |
+| REQ-063 | §97,§98,§99 | NSIS installer, uninstall behaviour, clean-machine validation | Release | `electron-builder.yml` (NSIS x64, per-machine, optionally changing the folder, licence page = `LICENSE.txt`, artifact `DentivaPro-Setup-${version}.exe`), `build/installer.nsh` (data directory deleted only when the operator explicitly answers Yes; a silent `/S` uninstall always keeps it), `docs/CLEAN_MACHINE_TEST.md` (step-by-step clean-machine procedure with a results table) | `ci-windows.yml` installer job (`dist:win` + `release:checksums`, artifacts uploaded) — must run on GitHub; the clean-machine pass is manual by nature | ⏳ |
+| REQ-064 | §100,§101,§102 | GitHub workflows, PR opened and left unmerged | Release | `.github/workflows/ci.yml` (typecheck, lint, three test layers, coverage, four audits, icon check, production bundle), `ci-windows.yml` (native module rebuild for Electron, E2E, installer, checksums), `release.yml` (tag `v*` or manual dispatch) | PR #1 is open against `main` and is never merged by the agent; the pipeline itself must be observed on GitHub | ⏳ |
+| REQ-065 | §103,§104,§135,§136 | Release artifacts, checksums, notes, version identity | Release | `release.yml` produces `DentivaPro-Setup-${version}.exe`, `DentivaPro-${version}-portable.zip` (unpacked copy), `SHA256SUMS.txt` (`scripts/generate-checksums.mjs`, `<sha256>  <name>` lines, refuses an empty folder), `RELEASE_NOTES.md`, `THIRD_PARTY_NOTICES.md` and `build-info.json`, then opens a **draft** GitHub Release; `scripts/generate-build-info.mjs` + `src/main/platform/buildIdentity.ts` record the exact build in About | local verification of the checksum script (hashes match `sha256sum`, empty folder refused); the release itself must be produced by the GitHub runner | ⏳ |
+| REQ-066 | §106..§109,§119 | Test strategy: unit/integration/E2E/negative/stress/DB audit | Tests | unit + integration + renderer suites (197 tests), `scripts/stress-seed.ts` (writes 10 000 patients / 100 000 visits / 20 000 appointments / 50 000 prescriptions / 100 000 invoices / 100 000 payments / 5 000 inventory rows through the application services, bounded by the scheduler's no-double-booking rule), six repository audits (placeholders, offline, licences, dead code, security, icons) | `npm test` in both workflows; `tests/e2e/{01..10}-*.spec.ts` implement the ten named workflows against the built Electron application with a scratch data directory each (`playwright.config.ts` has a global setup that refuses to run without a build, and the workflows type the test-only `DENTIVA_ACTIVATION_CODE` that a packaged build ignores) | ⏳ written, not yet executed — the first run is the Windows runner |
+| REQ-067 | §139,§140,§141 | This matrix, master checklist, screen inventory | Docs | `docs/TRACEABILITY_MATRIX.md`, `docs/COMPLETION_STATUS.md` | review | ⏳ |
+
+## G. Added commercial requirements (see PRODUCT_SPECIFICATION §5)
+
+| Req ID | Requirement | Module | Status |
+|---|---|---|---|
+| ADD-01 | Patient code format `DP-YYMM-####` with per-month counters | Patients | ⏳ |
+| ADD-02 | Dentist schedules driving appointment slots | Scheduling | ⏳ |
+| ADD-03 | Configurable invoice numbering prefix/sequence | Billing | ⏳ (fixed `INV-YYMM-NNNN` sequence from `db/counters.ts`; prefix configuration lands with settings) |
+| ADD-04 | Void/reversal semantics for invoices, payments, expenses | Billing/Accounting | ✅ (invoices, payments and accounting entries all keep the original row and mark it void with a reason; closed days block edits until reopened) |
+| ADD-05 | Aged receivables buckets (0-30/31-60/61-90/90+) | Reports | ⏳ |
+| ADD-06 | Treatment revenue + dentist productivity report | Reports | ⏳ |
+| ADD-07 | Stock valuation + purchase expenditure report | Inventory/Reports | ✅ (`stock_value` report key: on-hand quantity and value per item with totals; purchase spend is reported through `expenses_category` and the supplier roll-ups; reporting is screen + CSV, the PDF job arrives with printing) |
+| ADD-08 | Permission-aware CSV/PDF export per module | Data | ⏳ |
+| ADD-09 | Documented data directory & uninstall behaviour | Release | ⏳ |
+| ADD-10 | Recovery mode on DB failure | Platform | ✅ (`main/startup/state.ts` tracks starting/recovery/ready with a reason written for the operator; `app.startupState` is answered by the process before the router is consulted, and `app.openDataFolder`/`app.relaunch` are served the same way so the recovery screen works without a database; the renderer shows the recovery explanation and the actions that still function; `tests/integration/startup-state.test.ts`, `tests/renderer/recovery-ui.test.tsx`) |
+| ADD-11 | Printable patient clinical summary | Printing | ✅ (`patient_summary` layout in `printing/documents.ts`, print action on the patient profile) |
+| ADD-12 | Password change/policy + forced change | Auth | ⏳ |
+| ADD-13 | Idle auto-lock with lock screen | Session | ⏳ |
+| ADD-14 | Dashboard personalisation (per user) | Dashboard | ✅ (per-account dashboard period, panel selection and order from `@shared/preferences`, validated in `modules/preferences/service.ts` and honoured by `features/dashboard/DashboardScreen.tsx`; “recently viewed” records written by the patient, invoice and prescription detail lookups and resolved to titles, dropping anything the operator may no longer open) |
+| ADD-15 | Notification read/dismiss persistence | Notifications | ✅ (read/dismissed state is written to the `notifications` row and survives the periodic rebuild, because `raiseNotification` updates an existing `dedupe_key` in place instead of reinserting it; per-account alert mutes are stored as a preference and never silence a critical alert) |
+| ADD-16 | Maintenance tools (integrity check, vacuum, orphan scan) | Data | ⏳ |
+| ADD-17 | System event log | Platform | ⏳ |
+| ADD-18 | Local diagnostic bundle (no telemetry) | Support | ⏳ |
+| ADD-19 | Timezone-safe timestamps (epoch ms + local date) | DB | ⏳ |
+| ADD-20 | Attachment preview via safe OS open | Files | ⏳ |
+| ADD-21 | Referral follow-up tracking | Clinical | ⏳ |
+| ADD-22 | Queue discipline without orphan rows | Scheduling | ⏳ |
+| ADD-23 | Prescription templates (favourite sets) | Prescriptions | ⏳ |
+| ADD-24 | Role-based discount limits enforced in service | Billing | ✅ `discountLimitFor` + `billing.discount_override`; asserted in `tests/integration/billing.test.ts` |
+| ADD-25 | Patient CSV import with preview + transaction | Data | ⏳ |
+| ADD-26 | Accessibility/reduced-motion setting | UI | ⏳ |
