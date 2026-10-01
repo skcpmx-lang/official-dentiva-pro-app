@@ -351,6 +351,59 @@ export function saveAppointment(ctx: ServiceContext, input: AppointmentInput): A
   return loadAppointment(ctx, id)
 }
 
+/**
+ * One appointment status, applied without a second permission check.
+ *
+ * Callers are services that have already asserted their own permission and are moving the appointment as
+ * a consequence of the thing they were asked to do (the queue, today). Cancelling and no-show recording
+ * keep their reason requirement and are never reached from here.
+ */
+function applyStatus(ctx: ServiceContext, appointmentId: number, status: AppointmentStatus, note: string): void {
+  const current = ctx.db.prepare('SELECT status FROM appointments WHERE id = ? AND is_deleted = 0').get(appointmentId) as
+    | { status: AppointmentStatus }
+    | undefined
+  if (!current || current.status === status) return
+  /* A cancelled or no-show appointment is an end state: arriving late does not resurrect it. */
+  if (current.status === 'cancelled' || current.status === 'no_show' || current.status === 'completed') return
+  ctx.db.prepare('UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?').run(status, ctx.now(), appointmentId)
+  recordEvent(ctx, appointmentId, current.status, status, note)
+  ctx.audit.write({
+    module: 'appointments',
+    action: 'status',
+    entityType: 'appointment',
+    entityId: appointmentId,
+    summary: `Appointment ${current.status} → ${status}`,
+    detail: { reason: note }
+  })
+}
+
+/**
+ * Mirrors a queue walk onto the appointment the token was booked from.
+ *
+ * The front desk works from the queue, while the day's appointment list is the same story from the
+ * diary's point of view. Walking a token therefore moves the linked appointment along the same path —
+ * *called* means the patient has arrived, *started* means the consultation is under way, *completed*
+ * means it is done — so the two lists never disagree about a patient who is sitting in the clinic. The
+ * intermediate steps are recorded in order, so the appointment history reads like a real day rather than
+ * jumping from “scheduled” straight to “completed”.
+ *
+ * Callers are the queue service, which has already asserted `queue.manage`.
+ */
+export function mirrorQueueWalk(ctx: ServiceContext, appointmentId: number, stage: 'arrived' | 'in_consultation' | 'completed'): void {
+  const order: AppointmentStatus[] = ['scheduled', 'confirmed', 'arrived', 'in_consultation', 'completed']
+  const target = order.indexOf(stage)
+  const current = ctx.db.prepare('SELECT status FROM appointments WHERE id = ? AND is_deleted = 0').get(appointmentId) as
+    | { status: AppointmentStatus }
+    | undefined
+  if (!current) return
+  const from = order.indexOf(current.status)
+  /* Only ever move forward, and never through a status the appointment can no longer reach. */
+  if (from === -1 || from > target) return
+  for (let step = from + 1; step <= target; step += 1) {
+    applyStatus(ctx, appointmentId, order[step]!, `Queue: patient ${stage.replace('_', ' ')}`)
+  }
+}
+
 export function setAppointmentStatus(ctx: ServiceContext, input: { id: number, status: AppointmentStatus, reason?: string | null }): AppointmentRecord {
   assertPermission(ctx, input.status === 'cancelled' || input.status === 'no_show' ? 'appointments.cancel' : 'appointments.edit')
   const existing = loadAppointment(ctx, input.id)

@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test'
-import { closeClinic, invoke, launchClinic, openRoute, prepareClinic, todayLocalDate, type Clinic } from './support/harness'
+import {
+  closeClinic,
+  invoke,
+  launchClinic,
+  openRoute,
+  prepareClinic,
+  todayLocalDate,
+  type Clinic
+} from './support/harness'
+import { taka } from './support/scenario'
 
 /**
  * E2E-07 · Accounting → income → expense → report (`docs/TEST_PLAN.md` §2.7).
@@ -63,14 +72,14 @@ test('E2E-07 income and expense are recorded and appear in the ledger and a repo
   })
   const income = entries.items.find((row) => row.description === 'Consultation receipts — end-to-end run')
   const expense = entries.items.find((row) => row.description === 'Materials — end-to-end run')
-  expect(income?.amountMicro).toBe(120_000_000)
-  expect(expense?.amountMicro).toBe(30_000_000)
+  expect(income?.amountMicro).toBe(taka(1_200))
+  expect(expense?.amountMicro).toBe(taka(300))
 
   /* 4 · the day's summary reflects them. */
   const today = todayLocalDate()
   const summary = await invoke<{ incomeMicro: number, expenseMicro: number }>(page, 'accounting.summary', { from: today, to: today })
-  expect(summary.incomeMicro).toBeGreaterThanOrEqual(120_000_000)
-  expect(summary.expenseMicro).toBeGreaterThanOrEqual(30_000_000)
+  expect(summary.incomeMicro).toBeGreaterThanOrEqual(taka(1_200))
+  expect(summary.expenseMicro).toBeGreaterThanOrEqual(taka(300))
 
   /* 5 · a report is produced from the reports screen. */
   const catalog = await invoke<Array<{ key: string, title: string }>>(page, 'reports.catalog')

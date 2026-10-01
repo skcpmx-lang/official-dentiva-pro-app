@@ -2,6 +2,7 @@ import type { ServiceContext } from '../../context'
 import { assertPermission } from '../../context'
 import { notFoundError, stateError } from '@shared/errors'
 import { fromLocalDate, toLocalDate } from '@shared/datetime'
+import { mirrorQueueWalk } from './appointments'
 
 export type QueueStatus = 'waiting' | 'called' | 'in_progress' | 'completed' | 'skipped' | 'left'
 
@@ -234,12 +235,12 @@ export function setQueueStatus(
     ctx.db
       .prepare('UPDATE queue_entries SET status = @status, called_at = @calledAt, started_at = @startedAt, completed_at = @completedAt WHERE id = @id')
       .run({ id: input.id, status: input.status, calledAt, startedAt, completedAt })
-    /* Completing the queue entry closes the appointment too, so the day's list reflects reality. */
-    if (input.status === 'completed' && existing.appointmentId) {
-      ctx.db.prepare("UPDATE appointments SET status = 'completed', updated_at = ? WHERE id = ? AND status IN ('arrived','in_consultation')").run(now, existing.appointmentId)
-      ctx.db
-        .prepare('INSERT INTO appointment_events (appointment_id, from_status, to_status, at, by_user_id, note) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(existing.appointmentId, null, 'completed', now, ctx.actor.userId, 'Queue entry completed')
+    /* The queue and the appointment list tell one story: walking the token moves the linked appointment
+       along the same path, so a patient sitting in the chair is never still “scheduled” in the diary. */
+    if (existing.appointmentId) {
+      if (input.status === 'called') mirrorQueueWalk(ctx, existing.appointmentId, 'arrived')
+      else if (input.status === 'in_progress') mirrorQueueWalk(ctx, existing.appointmentId, 'in_consultation')
+      else if (input.status === 'completed') mirrorQueueWalk(ctx, existing.appointmentId, 'completed')
     }
     ctx.audit.write({
       module: 'queue',

@@ -29,12 +29,14 @@ import { savePatient, type PatientInput } from '@main/modules/patients/service'
 import { saveDentist, type DentistInput } from '@main/modules/dentists/service'
 import { saveAppointment, type AppointmentInput } from '@main/modules/scheduling/appointments'
 import { saveVisit, type VisitInput } from '@main/modules/clinical/visits'
+import { listConditions, setChartEntry } from '@main/modules/clinical/chart'
 import { savePrescription, type MedicineInput, type PrescriptionInput } from '@main/modules/clinical/prescriptions'
 import { saveInvoice, type InvoiceInput } from '@main/modules/billing/invoices'
 import { addPayment, type PaymentInput } from '@main/modules/billing/payments'
 import { saveItem, type InventoryItemInput } from '@main/modules/inventory/items'
 import { recordMovement } from '@main/modules/inventory/movements'
 import { fromLocalDate, toLocalDate } from '@shared/datetime'
+import { ADULT_TEETH } from '@shared/dental'
 
 interface Targets {
   patients: number
@@ -44,6 +46,7 @@ interface Targets {
   invoices: number
   payments: number
   items: number
+  chart: number
 }
 
 const DEFAULTS: Targets = {
@@ -53,7 +56,8 @@ const DEFAULTS: Targets = {
   prescriptions: 50_000,
   invoices: 100_000,
   payments: 100_000,
-  items: 5_000
+  items: 5_000,
+  chart: 40_000
 }
 
 /* The scheduler refuses a second appointment in the same slot for the same dentist, so appointment
@@ -92,7 +96,8 @@ const targets: Targets = {
   prescriptions: target('prescriptions'),
   invoices: target('invoices'),
   payments: target('payments'),
-  items: target('items')
+  items: target('items'),
+  chart: target('chart')
 }
 
 const dataDir = process.env.DENTIVA_DATA_DIR ?? join(process.cwd(), '.dentiva-stress')
@@ -355,6 +360,33 @@ function medicineInput(index: number): MedicineInput {
   } as MedicineInput
 }
 
+/* Dental chart history. The chart upserts on (patient, tooth, condition), so the generator walks
+   distinct triples: a repeated triple would update a row instead of adding one and the dataset would
+   come up short of the requested volume. */
+timed('chart entries', targets.chart, () => {
+  const from = Date.now()
+  const conditions = listConditions(ctx).filter((condition) => condition.isActive && condition.appliesTooth)
+  if (conditions.length === 0) {
+    throw new Error('stress-seed — the clinical vocabulary is empty; the database must be migrated before seeding.')
+  }
+  const teeth = ADULT_TEETH.map((tooth) => tooth.code)
+  const statuses = ['active', 'resolved', 'historic'] as const
+  const perPatient = conditions.length * teeth.length
+  for (let index = 0; index < targets.chart; index += 1) {
+    setChartEntry(ctx, {
+      patientId: pick(Math.floor(index / perPatient)),
+      visitId: null,
+      toothCode: teeth[Math.floor(index / conditions.length) % teeth.length]!,
+      dentition: 'adult',
+      conditionCode: conditions[index % conditions.length]!.code,
+      treatmentCode: null,
+      status: statuses[index % statuses.length]!,
+      note: null
+    })
+    progress('chart', index + 1, targets.chart, from)
+  }
+})
+
 timed('prescriptions', targets.prescriptions, () => {
   const from = Date.now()
   for (let index = 1; index <= targets.prescriptions; index += 1) {
@@ -483,6 +515,7 @@ const counts = {
   payments: (database.db.prepare('SELECT COUNT(*) AS count FROM payments').get() as { count: number }).count,
   prescriptions: (database.db.prepare('SELECT COUNT(*) AS count FROM prescriptions').get() as { count: number }).count,
   inventoryItems: (database.db.prepare('SELECT COUNT(*) AS count FROM inventory_items').get() as { count: number }).count,
+  chartEntries: (database.db.prepare('SELECT COUNT(*) AS count FROM dental_chart_entries').get() as { count: number }).count,
   auditEntries: (database.db.prepare('SELECT COUNT(*) AS count FROM audit_log').get() as { count: number }).count
 }
 
@@ -497,4 +530,5 @@ console.log('')
 console.log(`  total elapsed  ${((Date.now() - started) / 1000).toFixed(1)}s`)
 console.log(`  data directory ${dataDir}`)
 console.log('')
-console.log('Measure the budget with: DENTIVA_DATA_DIR=' + dataDir + ' npm run dev')
+console.log(`Measure the budgets with: DENTIVA_DATA_DIR=${dataDir} npm run perf:measure`)
+console.log(`Open it in the app with:  DENTIVA_DATA_DIR=${dataDir} npm run dev   (complete the wizard once)`)

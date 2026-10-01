@@ -5,6 +5,7 @@ import {
   ADMIN,
   CLINIC,
   E2E_ACTIVATION_CODE,
+  MICRO_PER_TAKA as MICRO_PER_TAKA_SCENARIO,
   FRONT_DESK,
   ITEM,
   administratorStepPayload,
@@ -25,8 +26,11 @@ import {
   setupCompletePayload,
   stockMovementPayload,
   visitPayload,
+  taka,
   visitTreatmentPayload
 } from '../e2e/support/scenario'
+import { MICRO_PER_TAKA } from '@shared/money'
+import { toLocalDate } from '@shared/datetime'
 
 /**
  * The end-to-end scenarios, replayed through the real router.
@@ -57,6 +61,17 @@ afterAll(() => {
 })
 
 describe('the end-to-end scenario payloads', () => {
+  it('writes money on the same scale the application does, in both directions', () => {
+    /* The workflows are written in taka and converted by `taka()`; the application stores micro-taka.
+       If either scale ever changes the end-to-end payloads would quietly record the wrong amount, so the
+       two constants are compared here rather than trusted to stay in step. */
+    expect(MICRO_PER_TAKA_SCENARIO).toBe(MICRO_PER_TAKA)
+    expect(taka(900)).toBe(9_000_000)
+    expect(invoicePayload(1).lines).toEqual([
+      expect.objectContaining({ unitPriceMicro: MICRO_PER_TAKA * 900 })
+    ])
+  })
+
   it('activates and completes the setup wizard with the payloads the workflows send', async () => {
     expect((await router.call<{ stage: string }>('app.bootstrap')).stage).toBe('activation')
     await router.call('activation.submit', { code: E2E_ACTIVATION_CODE })
@@ -94,21 +109,21 @@ describe('the end-to-end scenario payloads', () => {
     /* ৳ 900 of treatment on the invoice, then ৳ 400 and ৳ 500 received. */
     const invoice = await router.call<{ id: number, invoiceNo: string, totalMicro: number }>('invoices.save', invoicePayload(patientId))
     invoiceId = invoice.id
-    expect(invoice.totalMicro).toBe(900_000)
+    expect(invoice.totalMicro).toBe(taka(900))
 
-    await router.call('payments.add', paymentPayload(patientId, invoiceId, 400_000))
+    await router.call('payments.add', paymentPayload(patientId, invoiceId, taka(400)))
     let current = await router.call<{ status: string, dueMicro: number, paidMicro: number }>('invoices.get', { id: invoiceId })
-    expect(current.paidMicro).toBe(400_000)
-    expect(current.dueMicro).toBe(500_000)
+    expect(current.paidMicro).toBe(taka(400))
+    expect(current.dueMicro).toBe(taka(500))
 
-    await router.call('payments.add', paymentPayload(patientId, invoiceId, 500_000))
+    await router.call('payments.add', paymentPayload(patientId, invoiceId, taka(500)))
     current = await router.call<{ status: string, dueMicro: number, paidMicro: number }>('invoices.get', { id: invoiceId })
-    expect(current.paidMicro).toBe(900_000)
+    expect(current.paidMicro).toBe(taka(900))
     expect(current.dueMicro).toBe(0)
     expect(current.status).toBe('paid')
 
     /* Overpaying is refused: the clinic cannot receive more than the invoice asks for. */
-    const overpay = await router.callRaw('payments.add', paymentPayload(patientId, invoiceId, 100_000))
+    const overpay = await router.callRaw('payments.add', paymentPayload(patientId, invoiceId, taka(100)))
     expect(overpay.ok).toBe(false)
     if (overpay.ok) throw new Error('an overpayment must be refused')
 
@@ -137,10 +152,20 @@ describe('the end-to-end scenario payloads', () => {
     expect(board.items.some((row) => row.id === entry.id)).toBe(true)
     expect(board.counters.waiting).toBeGreaterThanOrEqual(1)
 
+    /* The walk mirrors onto the appointment, so a patient in the chair is never still “scheduled”. */
+    const arrived = await router.call<{ items: Array<{ id: number, status: string }> }>('appointments.day', { date: toLocalDate(Date.now()) })
+    expect(arrived.items.find((row) => row.id === appointment.id)?.status).toBe('arrived')
+
+    await router.call('queue.setStatus', { id: entry.id, status: 'called' })
     await router.call('queue.setStatus', { id: entry.id, status: 'in_progress' })
+    const consulting = await router.call<{ items: Array<{ id: number, status: string }> }>('appointments.day', { date: toLocalDate(Date.now()) })
+    expect(consulting.items.find((row) => row.id === appointment.id)?.status).toBe('in_consultation')
+
     await router.call('queue.setStatus', { id: entry.id, status: 'completed' })
     const after = await router.call<{ counters: { completedToday: number } }>('queue.board', { date: null })
     expect(after.counters.completedToday).toBeGreaterThanOrEqual(1)
+    const finished = await router.call<{ items: Array<{ id: number, status: string }> }>('appointments.day', { date: toLocalDate(Date.now()) })
+    expect(finished.items.find((row) => row.id === appointment.id)?.status).toBe('completed')
   })
 
   it('receives stock, corrects it, and retires the low-stock alert when it is restocked', async () => {
@@ -215,7 +240,7 @@ describe('the end-to-end scenario payloads', () => {
     if (billing.ok) throw new Error('a role without billing permissions must not list invoices')
     expect(billing.error.code).toBe('E_PERMISSION')
 
-    const payment = await router.handle(second, 'payments.add', paymentPayload(patientId, invoiceId, 100_000))
+    const payment = await router.handle(second, 'payments.add', paymentPayload(patientId, invoiceId, taka(100)))
     expect(payment.ok).toBe(false)
     if (payment.ok) throw new Error('a role without billing permissions must not record payments')
     expect(payment.error.code).toBe('E_PERMISSION')

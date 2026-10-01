@@ -73,7 +73,10 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostServi
   const dataDir = resolveDataDirectory(options.dataDir)
   const paths = resolvePaths(dataDir, appRoot, resourcesPath)
 
-  for (const directory of [paths.dataDir, dirname(paths.databaseFile), paths.logsDir, paths.tmpDir, paths.exportsDir, paths.attachmentsDir]) {
+  /* Every directory the application writes into is created up front, including the default backup folder:
+     the operator opens it from the backup screen before a first backup has been taken, and a missing
+     folder must never be the reason a safety feature looks broken. */
+  for (const directory of [paths.dataDir, dirname(paths.databaseFile), paths.logsDir, paths.tmpDir, paths.exportsDir, paths.attachmentsDir, paths.defaultBackupDir]) {
     try {
       mkdirSync(directory, { recursive: true })
     } catch {

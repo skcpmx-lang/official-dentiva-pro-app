@@ -26,6 +26,7 @@ test.describe.configure({ mode: 'serial' })
 let clinic: Clinic
 let patientId: number
 let patientName: string
+let appointmentId: number
 
 test.beforeAll(async () => {
   clinic = await launchClinic({ label: 'queue' })
@@ -38,7 +39,7 @@ test.beforeAll(async () => {
   patientName = patient.fullName
   /* Today at 11:00 local — inside the opening hours configured during setup. */
   const at = todayAt(11)
-  await seedAppointment(page, patientId, dentistId, at)
+  appointmentId = await seedAppointment(page, patientId, dentistId, at)
 })
 
 test.afterAll(async () => {
@@ -60,6 +61,8 @@ test('E2E-05 a patient is queued and walked from arrival to completed consultati
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await page.selectOption('#queuePatient', String(patientId))
+  /* Linking the booked appointment is what the dialog is for: it marks the appointment arrived. */
+  await page.selectOption('#queueAppointment', String(appointmentId))
   await dialog.getByRole('button', { name: 'Add to queue' }).click()
 
   await expect(page.getByText(patientName).first()).toBeVisible({ timeout: 30_000 })
@@ -81,7 +84,7 @@ test('E2E-05 a patient is queued and walked from arrival to completed consultati
   const board = await invoke<{ counters: { completedToday: number } }>(page, 'queue.board', { date: null })
   expect(board.counters.completedToday).toBeGreaterThanOrEqual(1)
 
-  /* 6 · the appointment that was linked to the token is no longer merely "scheduled". */
+  /* 6 · the appointment linked to the token followed the walk instead of staying merely "scheduled". */
   const appointments = await invoke<{ items: Array<{ patientId: number, status: string }> }>(page, 'appointments.day', { date: todayLocalDate() })
   const row = appointments.items.find((item) => item.patientId === patientId)
   expect(row?.status).not.toBe('scheduled')

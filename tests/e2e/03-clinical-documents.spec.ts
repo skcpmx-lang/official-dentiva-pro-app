@@ -75,7 +75,8 @@ test('E2E-03 the visit, the chart entry and the prescription are recorded and re
 
   /* 3 · the prescription screen shows the patient and the medicine. */
   await openRoute(page, `/prescriptions/${prescriptionId}`)
-  await expect(page.getByText('Amoxicillin 500 mg').first()).toBeVisible({ timeout: 30_000 })
+  /* The medicine name lives in an editable field on this screen, so its value is what must be readable. */
+  await expect(page.getByLabel('Medicine 1')).toHaveValue('Amoxicillin 500 mg', { timeout: 30_000 })
   await expect(page.getByText('জরিনা সুলতানা').first()).toBeVisible()
 })
 

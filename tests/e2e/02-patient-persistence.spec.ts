@@ -37,7 +37,7 @@ test('E2E-02 a patient is registered, found by search and still there after a re
 
   /* 1 · register the patient through the form. */
   await openRoute(page, '/patients/new')
-  await expect(page.getByRole('heading', { name: 'Register patient' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Register a patient' })).toBeVisible()
   await page.fill('#fullName', PATIENT.name)
   await page.fill('#fullNameBn', PATIENT.nameBn)
   await page.fill('#phone', PATIENT.phone)

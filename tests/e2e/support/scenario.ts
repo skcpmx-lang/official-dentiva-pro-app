@@ -127,6 +127,22 @@ export function loginPayload(credentials: { username: string, password: string }
 
 /* ------------------------------------------------------------------ clinic work */
 
+/*
+ * Money in the end-to-end payloads is written in taka and converted here.
+ *
+ * The application stores exact integers in micro-Taka (1 ৳ = 10 000 µ). The payloads used to carry
+ * hand-written micro values that were off by two decimal places, so an invoice meant to be ৳ 900.00 was
+ * recorded as ৳ 90.00, and every workflow that read the number back disagreed with the screen. Writing
+ * `taka(900)` removes the chance of mistyping a scale nobody can see. This file stays free of imports so
+ * it can be loaded by Playwright as plain data; `tests/integration/e2e-scenarios.test.ts` asserts that
+ * this constant still equals the application's own.
+ */
+export const MICRO_PER_TAKA = 10_000
+
+export function taka(amount: number): number {
+  return Math.round(amount * MICRO_PER_TAKA)
+}
+
 export function patientPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     fullName: 'Rakib Hasan',
@@ -178,7 +194,7 @@ export function visitTreatmentPayload(visitId: number, treatmentName = 'Root can
     treatmentName,
     toothCodes: ['46'],
     quantity: 1,
-    unitPriceMicro: 900_000,
+    unitPriceMicro: taka(900),
     discountMicro: 0,
     status: 'completed'
   }
@@ -227,7 +243,7 @@ export function chartEntryPayload(patientId: number, visitId: number | null = nu
   }
 }
 
-export function invoicePayload(patientId: number, unitPriceMicro = 900_000): Record<string, unknown> {
+export function invoicePayload(patientId: number, unitPriceMicro = taka(900)): Record<string, unknown> {
   return {
     patientId,
     visitId: null,
@@ -282,8 +298,8 @@ export function inventoryItemPayload(overrides: Record<string, unknown> = {}): R
     category: ITEM.category,
     unit: ITEM.unit,
     supplierId: null,
-    purchasePriceMicro: 250_000,
-    sellingPriceMicro: 400_000,
+    purchasePriceMicro: taka(250),
+    sellingPriceMicro: taka(400),
     reorderLevel: 10,
     expiryTracking: false,
     location: null,
@@ -298,7 +314,7 @@ export function stockMovementPayload(itemId: number, movementType: string, quant
     itemId,
     movementType,
     quantity,
-    unitCostMicro: 250_000,
+    unitCostMicro: taka(250),
     reason
   }
 }

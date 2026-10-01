@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { closeClinic, invoke, launchClinic, openRoute, prepareClinic, type Clinic } from './support/harness'
+import { taka } from './support/scenario'
 
 /**
  * E2E-06 · Inventory → purchase → stock in → adjustment → low-stock notification
@@ -54,6 +55,8 @@ test('E2E-06 stock is received, corrected, and a low-stock alert is raised and r
   await expect(movementDialog).toBeVisible()
   await page.selectOption('#movementType', 'purchase')
   await page.fill('#movementQuantity', '30')
+  /* Every movement carries a reason — the ledger is read years later, so the dialog insists. */
+  await page.fill('#movementReason', 'Purchase order received during the end-to-end run')
   await movementDialog.getByRole('button', { name: 'Add stock' }).click()
 
   await expect
@@ -65,6 +68,7 @@ test('E2E-06 stock is received, corrected, and a low-stock alert is raised and r
   await expect(movementDialog).toBeVisible()
   await page.selectOption('#movementType', 'adjustment_out')
   await page.fill('#movementQuantity', '10')
+  await page.fill('#movementReason', 'Stock take correction during the end-to-end run')
   await movementDialog.getByRole('button', { name: 'Take stock out' }).click()
 
   await expect
@@ -95,8 +99,8 @@ test('E2E-06 stock is received, corrected, and a low-stock alert is raised and r
     category: 'restorative',
     unit: ITEM.unit,
     supplierId: null,
-    purchasePriceMicro: 250_000,
-    sellingPriceMicro: 400_000,
+    purchasePriceMicro: taka(250),
+    sellingPriceMicro: taka(400),
     reorderLevel: 25,
     expiryTracking: false,
     location: null,
@@ -126,7 +130,7 @@ test('E2E-06 stock is received, corrected, and a low-stock alert is raised and r
     itemId,
     movementType: 'purchase',
     quantity: 40,
-    unitCostMicro: 250_000,
+    unitCostMicro: taka(250),
     reason: 'Purchase order received during the end-to-end run'
   })
   await invoke(page, 'notifications.summary')

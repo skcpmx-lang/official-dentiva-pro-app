@@ -18,6 +18,7 @@ import {
   preferencesStepPayload,
   prescriptionPayload,
   setupCompletePayload,
+  taka,
   visitPayload,
   visitTreatmentPayload
 } from './scenario'
@@ -351,7 +352,7 @@ export async function seedPrescription(page: Page, patientId: number, dentistId:
   return prescription.id
 }
 
-export async function seedInvoice(page: Page, patientId: number, unitPriceMicro = 900_000): Promise<{ id: number, invoiceNo: string, totalMicro: number }> {
+export async function seedInvoice(page: Page, patientId: number, unitPriceMicro = taka(900)): Promise<{ id: number, invoiceNo: string, totalMicro: number }> {
   const invoice = await invoke<{ id: number, invoiceNo: string, totalMicro: number }>(page, 'invoices.save', invoicePayload(patientId, unitPriceMicro))
   return { id: invoice.id, invoiceNo: invoice.invoiceNo, totalMicro: invoice.totalMicro }
 }

@@ -9,6 +9,7 @@ import {
   signInThroughUi,
   type Clinic
 } from './support/harness'
+import { taka } from './support/scenario'
 
 /**
  * E2E-08 · A user whose role excludes the financial permission is denied, in the interface *and* on the
@@ -67,8 +68,10 @@ test.afterAll(async () => {
 test('E2E-08 a restricted role cannot reach billing through the UI or the channel', async () => {
   const { page } = clinic
 
-  /* 1 · sign out of the administrator session. */
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  /* 1 · sign out of the administrator session. Signing out is deliberately two steps: the account
+     menu, then the confirmation, so a stray click cannot end a shift mid-record. */
+  await page.getByRole('button', { name: 'User menu' }).click()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
   const confirm = page.getByRole('dialog', { name: 'Sign out of Dentiva Pro?' })
   await expect(confirm).toBeVisible()
   await confirm.getByRole('button', { name: 'Sign out' }).click()
@@ -92,7 +95,7 @@ test('E2E-08 a restricted role cannot reach billing through the UI or the channe
   expect(code).toBe('E_PERMISSION')
 
   /* 6 · recording a payment is refused as well — the restriction is not only about reading. */
-  const paymentCode = await invokeExpectingFailure(page, 'payments.add', { patientId: 1, amountMicro: 100_000, method: 'cash', kind: 'payment', paidAt: Date.now() })
+  const paymentCode = await invokeExpectingFailure(page, 'payments.add', { patientId: 1, amountMicro: taka(10), method: 'cash', kind: 'payment', paidAt: Date.now() })
   expect(paymentCode).toBe('E_PERMISSION')
 
   /* 7 · the audit log is another area this role may not read, and it says so the same way: denial is

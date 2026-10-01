@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Building2, CheckCircle2, Printer, Stethoscope, UserRound, Wallet } from 'lucide-react'
 import { zClinicProfileInput, zDentistInput, zSetupAdministratorInput } from '@shared/contracts'
 import { Button, Card, CardBody, CardHeader, PageHeader } from '../../components/ui/primitives'
@@ -34,13 +34,23 @@ export function SetupWizard(): ReactNode {
   const [step, setStep] = useState<StepKey>('clinic')
   const [busy, setBusy] = useState(false)
   const [summary, setSummary] = useState<null | Awaited<ReturnType<typeof loadSummary>>>(null)
+  const [preferencesSaved, setPreferencesSaved] = useState(false)
 
   const loadSummary = () => invoke('setup.summary', {})
 
-  // An interrupted setup resumes at the first step that is still incomplete.
+  /*
+   * An interrupted setup resumes at the first step that is still incomplete — once, when the first
+   * status arrives. Deciding again on every reload made the wizard fight the operator: saving the
+   * preferences reloads the status, and the effect immediately put the wizard back on the preferences
+   * step, so the review step (and its *Finish setup* button) could disappear before it was drawn. On a
+   * slower machine it disappeared every time, which is why finishing setup hung at the last step.
+   */
+  const resumed = useRef(false)
   useEffect(() => {
+    if (resumed.current) return
     const data = status.data
     if (!data) return
+    resumed.current = true
     if (!data.hasClinic) setStep('clinic')
     else if (data.dentistCount === 0) setStep('dentists')
     else if (!data.hasAdministrator) setStep('administrator')
@@ -52,10 +62,10 @@ export function SetupWizard(): ReactNode {
       clinic: Boolean(status.data?.hasClinic),
       dentists: (status.data?.dentistCount ?? 0) > 0,
       administrator: Boolean(status.data?.hasAdministrator),
-      preferences: false,
+      preferences: preferencesSaved,
       review: false
     }),
-    [status.data]
+    [status.data, preferencesSaved]
   )
 
   const goToReview = async (): Promise<void> => {
@@ -156,6 +166,7 @@ export function SetupWizard(): ReactNode {
             <PreferencesStep
               onBack={() => setStep('administrator')}
               onDone={() => {
+                setPreferencesSaved(true)
                 void status.reload()
                 void goToReview()
               }}

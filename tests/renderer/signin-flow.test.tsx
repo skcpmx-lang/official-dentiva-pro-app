@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { LoginScreen } from '../../src/renderer/src/features/auth/LoginScreen'
+import { AppShell } from '../../src/renderer/src/components/shell/AppShell'
+import { ConfirmDialogHost, Toaster } from '../../src/renderer/src/components/ui/overlay'
 import { useAppStore } from '../../src/renderer/src/store/appStore'
 import { createHarness, type TestHarness } from '../integration/helpers'
 import { createRouterHarness, type RouterHarness } from '../integration/routerHarness'
@@ -131,5 +133,49 @@ describe('signing in from the sign-in screen', () => {
     expect(screen.getByRole('alert').textContent ?? '').toContain('username or password')
     expect(useAppStore.getState().session).toBeNull()
     expect(screen.queryByText('workspace reached')).toBeNull()
+  })
+})
+
+describe('signing out from the workspace', () => {
+  it('ends the session through the account menu and the confirmation, and returns to the sign-in screen', async () => {
+    const user = userEvent.setup()
+
+    const login = await router.call<{ session: unknown, clinic: unknown }>('auth.login', {
+      username: ADMIN.username,
+      password: ADMIN.password
+    })
+    useAppStore.setState({
+      session: login.session as never,
+      clinic: login.clinic as never,
+      stage: 'ready',
+      locked: false
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<AppShell />} />
+          <Route path="/login" element={<LoginScreen />} />
+        </Routes>
+        <ConfirmDialogHost />
+        <Toaster />
+      </MemoryRouter>
+    )
+
+    /* Signing out is deliberately two steps: the account menu, then a confirmation — a stray click must
+       not end a shift in the middle of a record. */
+    await user.click(await screen.findByRole('button', { name: 'User menu' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+
+    const confirm = await screen.findByRole('dialog', { name: 'Sign out of Dentiva Pro?' })
+    await user.click(within(confirm).getByRole('button', { name: 'Sign out' }))
+
+    await waitFor(() => expect(document.querySelector('#username')).toBeTruthy(), { timeout: 10_000 })
+    expect(useAppStore.getState().session).toBeNull()
+    expect(useAppStore.getState().locked).toBe(false)
+
+    /* And the session is really gone in the main process: the next call is refused, not served from a
+       session the shell merely stopped rendering. */
+    await expect(router.call('patients.list', { limit: 1, offset: 0 })).rejects.toThrow(/E_UNAUTHENTICATED/)
   })
 })

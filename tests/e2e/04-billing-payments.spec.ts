@@ -9,6 +9,7 @@ import {
   seedPatient,
   type Clinic
 } from './support/harness'
+import { taka } from './support/scenario'
 
 /**
  * E2E-04 · Patient → invoice → partial payment → due → second payment → fully paid
@@ -33,8 +34,7 @@ test.beforeAll(async () => {
 
   const patient = await seedPatient(page, { fullName: 'Mehedi Hasan' })
   patientId = patient.id
-  /* ৳ 900.00 in micro-taka. */
-  const invoice = await seedInvoice(page, patientId, 900_000)
+  const invoice = await seedInvoice(page, patientId, taka(900))
   invoiceId = invoice.id
 })
 
@@ -57,8 +57,8 @@ test('E2E-04 a partial payment leaves the correct due and the second payment set
   /* 2 · the invoice reports ৳ 500.00 outstanding and a partial status. */
   await expect(page.getByText('৳ 500.00').first()).toBeVisible({ timeout: 30_000 })
   const afterFirst = await invoke<{ status: string, dueMicro: number, paidMicro: number }>(page, 'invoices.get', { id: invoiceId })
-  expect(afterFirst.paidMicro).toBe(40_000_000)
-  expect(afterFirst.dueMicro).toBe(50_000_000)
+  expect(afterFirst.paidMicro).toBe(taka(400))
+  expect(afterFirst.dueMicro).toBe(taka(500))
   expect(afterFirst.status).toBe('partial')
 
   /* 3 · pay the remainder. */
@@ -71,7 +71,7 @@ test('E2E-04 a partial payment leaves the correct due and the second payment set
   await expect(page.getByText('৳ 0.00').first()).toBeVisible({ timeout: 30_000 })
   const afterSecond = await invoke<{ status: string, dueMicro: number, paidMicro: number }>(page, 'invoices.get', { id: invoiceId })
   expect(afterSecond.dueMicro).toBe(0)
-  expect(afterSecond.paidMicro).toBe(90_000_000)
+  expect(afterSecond.paidMicro).toBe(taka(900))
   expect(afterSecond.status).toBe('paid')
 
   const payments = await invoke<{ items: Array<{ amountMicro: number }> }>(page, 'payments.list', {
@@ -79,7 +79,7 @@ test('E2E-04 a partial payment leaves the correct due and the second payment set
     limit: 20,
     offset: 0
   })
-  expect(payments.items.map((row) => row.amountMicro).sort((left, right) => left - right)).toEqual([40_000_000, 50_000_000])
+  expect(payments.items.map((row) => row.amountMicro).sort((left, right) => left - right)).toEqual([taka(400), taka(500)])
 
   /* 5 · overpayment is refused: the screen must not accept more than the outstanding balance. */
   await page.getByRole('button', { name: 'Take payment' }).first().click()
@@ -90,5 +90,5 @@ test('E2E-04 a partial payment leaves the correct due and the second payment set
   await dialog.getByRole('button', { name: 'Cancel' }).click()
 
   const unchanged = await invoke<{ paidMicro: number }>(page, 'invoices.get', { id: invoiceId })
-  expect(unchanged.paidMicro).toBe(90_000_000)
+  expect(unchanged.paidMicro).toBe(taka(900))
 })
